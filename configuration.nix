@@ -92,6 +92,13 @@
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
 
+  services = {
+    k3s = {
+      enable = true;
+      role = "server";
+    };
+  };
+
   # DNS.
   services.adguardhome.enable = false; # Look into cloud-native solutions.
 
