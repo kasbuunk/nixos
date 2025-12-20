@@ -99,6 +99,15 @@
     };
   };
 
+  environment.etc."rancher/k3s/config.yaml".text = ''
+    write-kubeconfig-mode: "0644"
+    tls-san:
+      - "192.168.1.76"
+    cluster-init: true
+    disable:
+      - traefik
+  '';
+
   # DNS.
   services.adguardhome.enable = false; # Look into cloud-native solutions.
 
@@ -159,6 +168,9 @@
       kdePackages.kate
     #  thunderbird
     ];
+
+    # Default shell is fish.
+    shell = pkgs.fish;
   };
 
   # Keep SSH available.
@@ -166,6 +178,9 @@
 
   # Install firefox.
   programs.firefox.enable = true;
+
+  # Fish shell.
+  programs.fish.enable = true;
 
   # Enable flakes for version control.
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -186,38 +201,74 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-  
+    
     users.kasbuunk = { pkgs, ... }: {
-      home.stateVersion = "25.11";
-      home.username = "kasbuunk";
-      home.homeDirectory = "/home/kasbuunk";
-      
-      programs.tmux = {
-        enable = true;
-        clock24 = true;
-        customPaneNavigationAndResize = true;
-        disableConfirmationPrompt = true;
-        escapeTime = 0;
-        keyMode = "vi";
-        mouse = true;
-        newSession = true;
-        prefix = "c-a";
-        extraConfig = ''
-          # Make links clickable.
-          set -ga terminal-features "*:hyperlinks"
+      home = {
+        stateVersion = "25.11";
+        username = "kasbuunk";
+        homeDirectory = "/home/kasbuunk";
+        
+        sessionVariables = {
+          EDITOR = "nvim";
+          KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
+        };
+        shellAliases = {
+          "..." = "cd ../..";
+          "...." = "cd ../../..";
+          "....." = "cd ../../../..";
+          "......" = "cd ../../../../..";
+          "docker" = "podman";
+        };
+      };
+  
+      programs = {
+        alacritty = {
+          enable = true;
+        };
+
+        fish = {
+          enable = true;
+          shellAliases = {
+            zf = "z --pipe=fzf";
+          };
+          plugins = with pkgs.fishPlugins; [
+            { name = "fzf"; src = fzf-fish.src; } # better than built-in fzf keybinds
+          ];
+          shellInit = ''
+          '';
+        };
+        fzf = {
+          enable = true;
+          enableFishIntegration = false; # use fzf-fish plugin instead
+        };
+
+        tmux = {
+          enable = true;
+          clock24 = true;
+          customPaneNavigationAndResize = true;
+          disableConfirmationPrompt = true;
+          escapeTime = 0;
+          keyMode = "vi";
+          mouse = true;
+          newSession = true;
+          prefix = "c-a";
+          extraConfig = ''
+            # Make links clickable.
+            set -ga terminal-features "*:hyperlinks"
     
-          # Navigate windows.
-          bind -n C-h select-pane -L
-          bind -n C-j select-pane -D
-          bind -n C-k select-pane -U
-          bind -n C-l select-pane -R
+            # Navigate windows.
+            bind -n C-h select-pane -L
+            bind -n C-j select-pane -D
+            bind -n C-k select-pane -U
+            bind -n C-l select-pane -R
     
-          # Termguicolors.
-          set -g default-terminal "$TERM"
-          set -ag terminal-overrides ",$TERM:Tc"
-          set-option -g default-shell /bin/zsh
-          set-option -g default-command /bin/zsh
-        '';
+            # Termguicolors.
+            set -g default-terminal "$TERM"
+            set -ag terminal-overrides ",$TERM:Tc"
+            set-option -g default-shell /etc/profiles/per-user/kasbuunk/bin/fish
+            set-option -g default-command /etc/profiles/per-user/kasbuunk/bin/fish
+          '';
+        };
       };
     };
   };
