@@ -14,4 +14,31 @@ This project contains the configuration for Kas Buunk's Home Lab. This flake may
 1. Clone this repository inside, such that it resides in `~/.config/nixos`.
 1. Remove the files in `/etc/nixos/` (optionally backup).
 1. Create symlink to keep `/etc/nixos` non-empty: `sudo ln -s ~/.config/nixos/configuration.nix /etc/nixos/configuration.nix`
-1. Run `sudo nixos-rebuild switch --flake ~/.config/nixos
+1. Run `sudo nixos-rebuild switch --flake ~/.config/nixos`
+
+## Auto-Update Setup
+
+The system automatically updates daily via a systemd timer. To enable auto-updates, complete these one-time setup steps:
+
+1. Generate SSH deploy key as root:
+```bash
+   sudo ssh-keygen -t ed25519 -f /root/.ssh/nixos-autoupdate -N ""
+```
+
+2. Get the public key:
+```bash
+   sudo cat /root/.ssh/nixos-autoupdate.pub
+```
+
+3. Add the deploy key to GitHub:
+   - Navigate to your repository → Settings → Deploy keys → Add deploy key
+   - Paste the public key
+   - Enable "Allow write access"
+   - Save
+
+4. Rebuild to activate the timer:
+```bash
+   sudo nixos-rebuild switch --flake ~/.config/nixos
+```
+
+The system will now check for flake updates daily at midnight, automatically commit and push any changes to `flake.lock`, and rebuild the system configuration.
