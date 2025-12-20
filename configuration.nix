@@ -267,7 +267,7 @@
        Type = "oneshot";
        User = "kasbuunk";
      };
-     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild ];
+     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
      script = ''
        export GIT_SSH_COMMAND="ssh -i /home/kasbuunk/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new"
        cd /home/kasbuunk/.config/nixos/
