@@ -110,10 +110,12 @@
     isNormalUser = true;
     description = "Kas Buunk";
     extraGroups = [ "networkmanager" "wheel" ];
+
     openssh.authorizedKeys.keys = [
       # Public key NixOS HomeLab in 1Password.
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINo3te96zjiEAQnLe30m/zyzMtII+R3S4lsmLFgsJoZa"
     ];
+
     packages = with pkgs; [
       kdePackages.kate
     #  thunderbird
@@ -161,6 +163,10 @@
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
     };
+    extraConfig = ''
+      ClientAliveInterval 60
+      ClientAliveCountMax 120
+    '';
   };
 
   # This value determines the NixOS release from which the default
