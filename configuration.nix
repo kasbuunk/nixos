@@ -117,6 +117,14 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  security.sudo.extraRules = [{
+    users = [ "kasbuunk" ];
+    commands = [{
+      command = "${pkgs.nixos-rebuild}/bin/nixos-rebuild";
+      options = [ "NOPASSWD" ];
+    }];
+   }];
+
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -253,5 +261,32 @@
     targets.suspend.enable = false;
     targets.hibernate.enable = false;
     targets.hybrid-sleep.enable = false;
+
+    services.nixos-autoupdate = {
+     serviceConfig = {
+       Type = "oneshot";
+       User = "kasbuunk";
+     };
+     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild ];
+     script = ''
+       export GIT_SSH_COMMAND="ssh -i /home/kasbuunk/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new"
+       cd /home/kasbuunk/.config/nixos/
+       git pull
+       nix flake update
+       git add flake.lock
+       git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
+       git push
+       sudo nixos-rebuild switch --flake .#nixos
+     '';
+   };
+
+   timers.nixos-autoupdate = {
+     wantedBy = [ "timers.target" ];
+     timerConfig = {
+       OnCalendar = "minutely";
+       Persistent = true;
+       WakeSystem = true;
+     };
+   };
   };
 }
