@@ -23,15 +23,30 @@
   boot.loader.grub.enableCryptodisk = true;
 
   boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile = "/boot/crypto_keyfile.bin";
-  networking.hostName = "nixos"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+ 
+  networking = {
+    hostName = "nixos"; # Define your hostname.
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+    # Enables wireless support via wpa_supplicant.
+    # This is mutually exlusive from the networkmanager below (I think).
+    # wireless.enable = true;  
+  
+    # Wake up server by sending a packet.
+    interfaces.wlp11s0f3u4.wakeOnLan.enable = true;
 
-  # Enable networking
-  networking.networkmanager.enable = true;
+    # Enable networking
+    networkmanager.enable = true;
+
+    # Configure network proxy if necessary
+    # proxy.default = "http://user:password@proxy:port/";
+    # proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+
+    # Open ports in the firewall.
+    # networking.firewall.allowedTCPPorts = [ ... ];
+    # networking.firewall.allowedUDPPorts = [ ... ];
+    # Or disable the firewall altogether.
+    # networking.firewall.enable = false;
+  };
 
   # Set your time zone.
   time.timeZone = "Europe/Amsterdam";
@@ -105,6 +120,9 @@
     ];
   };
 
+  # Keep SSH available.
+  powerManagement.enable = false;
+
   # Install firefox.
   programs.firefox.enable = true;
 
@@ -145,12 +163,6 @@
     };
   };
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
@@ -159,4 +171,10 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.05"; # Did you read the comment?
 
+  systemd = {
+    targets.sleep.enable = false;
+    targets.suspend.enable = false;
+    targets.hibernate.enable = false;
+    targets.hybrid-sleep.enable = false;
+  };
 }
