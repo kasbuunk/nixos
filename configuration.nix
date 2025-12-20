@@ -267,9 +267,12 @@
        Type = "oneshot";
        User = "kasbuunk";
      };
-     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
+     environment = {
+       SSH_AUTH_SOCK = ""; # Disable SSH agent
+     };
+     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh pkgs.sudo ];
      script = ''
-       export GIT_SSH_COMMAND="ssh -i /home/kasbuunk/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new"
+       export GIT_SSH_COMMAND="ssh -i /home/kasbuunk/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
        cd /home/kasbuunk/.config/nixos/
        git pull
        nix flake update
