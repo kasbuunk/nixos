@@ -52,8 +52,20 @@
     # proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
     # Open ports in the firewall.
-    # networking.firewall.allowedTCPPorts = [ ... ];
-    # networking.firewall.allowedUDPPorts = [ ... ];
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [
+        22
+        # DNS disabled until a solution is found.
+        # 53
+        # 3000
+      ];
+      allowedUDPPorts = [ 
+        # DNS disabled until a solution is found.
+        # 53
+      ];
+    };
+
     # Or disable the firewall altogether.
     # networking.firewall.enable = false;
   };
@@ -76,14 +88,16 @@
     LC_TIME = "nl_NL.UTF-8";
   };
 
-  # Enable the X11 windowing system.
-  # You can disable this if you're only using the Wayland session.
-  services.xserver.enable = true;
-
   # Enable the KDE Plasma Desktop Environment.
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
 
+  # DNS.
+  services.adguardhome.enable = false; # Look into cloud-native solutions.
+
+  # Enable the X11 windowing system.
+  # You can disable this if you're only using the Wayland session.
+  services.xserver.enable = true;
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -149,10 +163,10 @@
   environment.systemPackages = with pkgs; [
     _1password-gui
     git
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    vim
     neovim
     tmux
-  #  wget
+    xclip
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
