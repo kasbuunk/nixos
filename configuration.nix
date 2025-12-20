@@ -165,17 +165,55 @@
     git
     vim
     neovim
-    tmux
     xclip
   ];
 
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  
+  home-manager.users.kasbuunk = { pkgs, ... }: {
+    home.stateVersion = "25.11";
+    home.username = "kasbuunk";
+    home.homeDirectory = "/home/kasbuunk";
+    
+    programs.tmux = {
+      enable = true;
+      clock24 = true;
+      customPaneNavigationAndResize = true;
+      disableConfirmationPrompt = true;
+      escapeTime = 0;
+      keyMode = "vi";
+      mouse = true;
+      newSession = true;
+      prefix = "c-a";
+      extraConfig = ''
+        # Make links clickable.
+        set -ga terminal-features "*:hyperlinks"
+  
+        # Navigate windows.
+        bind -n C-h select-pane -L
+        bind -n C-j select-pane -D
+        bind -n C-k select-pane -U
+        bind -n C-l select-pane -R
+  
+        # Termguicolors.
+        set -g default-terminal "$TERM"
+        set -ag terminal-overrides ",$TERM:Tc"
+        set-option -g default-shell /bin/zsh
+        set-option -g default-command /bin/zsh
+      '';
+    };
+  };
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
+  programs = {
+    # mtr.enable = true;
+    # gnupg.agent = {
+    #   enable = true;
+    #   enableSSHSupport = true;
+    # };
+  };
 
   # List services that you want to enable:
 
