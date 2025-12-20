@@ -96,6 +96,10 @@
     k3s = {
       enable = true;
       role = "server";
+      extraFlags = [
+        "--disable=traefik"  # If you want your own ingress
+        "--write-kubeconfig-mode=644"
+      ];
     };
   };
 
@@ -195,6 +199,7 @@
     git
     vim
     neovim
+    opentofu
     xclip
   ];
 
@@ -230,6 +235,7 @@
           enable = true;
           shellAliases = {
             zf = "z --pipe=fzf";
+            build = "sudo nixos-rebuild switch --flake ~/.config/nixos";
           };
           plugins = with pkgs.fishPlugins; [
             { name = "fzf"; src = fzf-fish.src; } # better than built-in fzf keybinds
