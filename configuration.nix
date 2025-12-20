@@ -265,21 +265,22 @@
     services.nixos-autoupdate = {
      serviceConfig = {
        Type = "oneshot";
-       User = "kasbuunk";
+       User = "root";
      };
      environment = {
        SSH_AUTH_SOCK = ""; # Disable SSH agent
      };
-     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh pkgs.sudo ];
+     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
      script = ''
-       export GIT_SSH_COMMAND="ssh -i /home/kasbuunk/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
+       git config --global --add safe.directory /home/kasbuunk/.config/nixos
+       export GIT_SSH_COMMAND="ssh -i /root/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
        cd /home/kasbuunk/.config/nixos/
        git pull
        nix flake update
        git add flake.lock
        git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
        git push
-       sudo nixos-rebuild switch --flake .#nixos
+       nixos-rebuild switch --flake .#nixos
      '';
    };
 
