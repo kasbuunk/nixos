@@ -32,10 +32,20 @@
     # wireless.enable = true;  
   
     # Wake up server by sending a packet.
-    interfaces.wlp11s0f3u4.wakeOnLan.enable = true;
+    interfaces.wlp11s0f3u4 = {
+      ipv4.addresses = [{
+        address = "192.168.1.76"; # Fixed in the router settings.
+        prefixLength = 24;
+      }];
+
+      wakeOnLan.enable = true;
+    };
 
     # Enable networking
     networkmanager.enable = true;
+
+    defaultGateway = "192.168.1.1"; # Router ip.
+    nameservers = [ "1.1.1.1" ]; # Cloudflare's DNS.
 
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";
