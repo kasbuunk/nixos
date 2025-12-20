@@ -287,7 +287,7 @@
    timers.nixos-autoupdate = {
      wantedBy = [ "timers.target" ];
      timerConfig = {
-       OnCalendar = "minutely";
+       OnCalendar = "daily";
        Persistent = true;
        WakeSystem = true;
      };
