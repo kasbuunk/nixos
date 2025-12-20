@@ -5,10 +5,27 @@
 { config, pkgs, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [ # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
+
+  # Secret management.
+  sops = {
+    defaultSopsFile = ./secrets.yaml;
+    age.keyFile = "/home/kasbuunk/.config/sops/age/keys.txt";
+  
+    secrets = {
+      postgres-password = {
+        owner = "root";
+      };
+      gitea-admin-password = {
+        owner = "root";
+      };
+      gitea-db-password = {
+        owner = "root";
+      };
+    };
+  };
 
   # Bootloader.
   boot.loader.grub.enable = true;
@@ -196,10 +213,14 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     _1password-gui
+    age
     git
-    vim
+    kubectl
+    kubernetes-helm
     neovim
     opentofu
+    sops
+    vim
     xclip
   ];
 

@@ -42,3 +42,26 @@ The system automatically updates daily via a systemd timer. To enable auto-updat
 ```
 
 The system will now check for flake updates daily at midnight, automatically commit and push any changes to `flake.lock`, and rebuild the system configuration.
+
+## Secret management
+
+### Generate key
+
+```bash
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+chown kasbuunk:users ~/.config/sops/age/keys.txt
+
+# Added as secure note in 1Password.
+
+# Note the public key from output (starts with "age1...")
+```
+
+### Edit secrets
+
+```bash
+sops secrets.yaml
+```
+
+N.B.: Backup `~/.config/sops/age/keys.txt` - without this, secrets cannot be decrypted.
