@@ -36,6 +36,7 @@ resource "kubernetes_secret" "postgres" {
   }
 
   data = {
+    username = "admin"
     password = file("/run/secrets/postgres-password")
   }
 }
@@ -47,7 +48,6 @@ resource "kubernetes_secret" "gitea_admin" {
   }
 
   data = {
-    username = "admin"
     password = file("/run/secrets/gitea-admin-password")
   }
 }
@@ -65,12 +65,12 @@ resource "helm_release" "gitea" {
         http = {
           type = "NodePort"
           port = 3000
-          nodePort = 30300  # Access at http://192.168.1.76:30300
+          nodePort = var.gitea_http_port
         }
         ssh = {
           type = "NodePort"
           port = 22
-          nodePort = 30222
+          nodePort = var.gitea_ssh_port
         }
       }
       
@@ -80,8 +80,8 @@ resource "helm_release" "gitea" {
         }
         config = {
           server = {
-            DOMAIN = "192.168.1.76"
-            ROOT_URL = "http://192.168.1.76:30300/"
+            DOMAIN = var.host_ip
+            ROOT_URL = "http://${var.host_ip}:${var.gitea_http_port}/"
           }
           database = {
             DB_TYPE = "postgres"

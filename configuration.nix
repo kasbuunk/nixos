@@ -4,6 +4,10 @@
 
 { config, pkgs, ... }:
 
+let
+  cfg = import ./variables.nix;
+in
+
 {
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -46,9 +50,9 @@
     # wireless.enable = true;  
   
     # Wake up server by sending a packet.
-    interfaces.wlp11s0f3u4 = {
+    interfaces.${cfg.network.interface} = {
       ipv4.addresses = [{
-        address = "192.168.1.76"; # Fixed in the router settings.
+        address = cfg.network.hostIp;
         prefixLength = 24;
       }];
 
@@ -58,8 +62,8 @@
     # Enable networking
     networkmanager.enable = true;
 
-    defaultGateway = "192.168.1.1"; # Router ip.
-    nameservers = [ "1.1.1.1" ]; # Cloudflare's DNS.
+    defaultGateway = cfg.network.gateway;
+    nameservers = [ cfg.network.dns ]; # Cloudflare's DNS.
 
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";
@@ -69,7 +73,11 @@
     firewall = {
       enable = true;
       allowedTCPPorts = [
-        22
+        cfg.services.ssh.port
+        # Expose internal services here.
+        # cfg.services.gitea.httpPort
+        # cfg.services.gitea.sshPort
+
         # DNS disabled until a solution is found.
         # 53
         # 3000
