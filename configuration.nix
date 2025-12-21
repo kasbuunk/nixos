@@ -190,6 +190,10 @@ in
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  security.pki.certificateFiles = [
+    ./certs/ca.crt # Generated with openssl.
+  ];
+
   security.sudo.extraRules = [{
     users = [ "kasbuunk" ];
     commands = [{
@@ -272,6 +276,7 @@ in
     kubectl
     kubernetes-helm
     neovim
+    openssl_oqs
     opentofu
     sops
     vim
