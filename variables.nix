@@ -8,10 +8,14 @@
 
   services = {
     adguard = {
+      hostName = "adguard.home";
       httpPort = 3001;
+      httpsPort = 3002;
       dnsPort = 53;
+      dnsOverTLSPort = 853;
     };
     gitea = {
+      hostName = "gitea.home";
       httpPort = 30300;
       sshPort = 30222;
     };

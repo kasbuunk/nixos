@@ -28,6 +28,24 @@ in
       gitea-admin-password = {
         owner = "gitea";
       };
+
+      # TLS certificates
+      gitea-tls-key = {
+        owner = "gitea";
+        mode = "0400";
+      };
+      gitea-tls-cert = {
+        owner = "gitea";
+        mode = "0444";
+      };
+      adguard-tls-key = {
+        owner = "adguardhome";
+        mode = "0400";
+      };
+      adguard-tls-cert = {
+        owner = "adguardhome";
+        mode = "0444";
+      };
     };
   };
 
@@ -81,7 +99,9 @@ in
         cfg.services.gitea.httpPort
         cfg.services.gitea.sshPort
         cfg.services.adguard.httpPort
+        cfg.services.adguard.httpsPort
         cfg.services.adguard.dnsPort
+        cfg.services.adguard.dnsOverTLSPort
       ];
       allowedUDPPorts = [ 
         cfg.services.adguard.dnsPort
@@ -151,6 +171,17 @@ in
         # Hash of the password - see 1password.
         password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
       }];
+
+      tls = {
+        enabled = true;
+        server_name = cfg.services.adguard.hostName;
+        force_https = true;
+        port_https = cfg.services.adguard.httpsPort;
+        port_dns_over_tls = cfg.services.adguard.dnsOverTLSPort;
+        certificate_path = config.sops.secrets.adguard-tls-cert.path;
+        private_key_path = config.sops.secrets.adguard-tls-key.path;
+      };
+
       dns = {
         bind_hosts = [ "0.0.0.0" ];
         port = cfg.services.adguard.dnsPort;
@@ -250,6 +281,13 @@ in
   };
   
   users.groups.gitea = {};
+
+  users.users.adguardhome = {
+    isSystemUser = true;
+    group = "adguardhome";
+  };
+  users.groups.adguardhome = {};
+
 
   # Keep SSH available.
   powerManagement.enable = false;
@@ -386,11 +424,18 @@ in
 
       settings = {
         server = {
-          DOMAIN = cfg.network.hostIp;
+          DOMAIN = cfg.services.gitea.hostName;
           HTTP_ADDR = "0.0.0.0";
           HTTP_PORT = cfg.services.gitea.httpPort;
-          ROOT_URL = "http://${cfg.network.hostIp}:${toString cfg.services.gitea.httpPort}/";
-          SSH_DOMAIN = cfg.network.hostIp;
+          ROOT_URL = "https://${cfg.services.gitea.hostName}:${toString cfg.services.gitea.httpPort}/";
+
+          # Enable HTTPS
+          PROTOCOL = "https";
+          CERT_FILE = config.sops.secrets.gitea-tls-cert.path;
+          KEY_FILE = config.sops.secrets.gitea-tls-key.path;
+
+
+          SSH_DOMAIN = cfg.services.gitea.hostName;
           SSH_PORT = cfg.services.gitea.sshPort;
         };
         
@@ -483,5 +528,29 @@ in
        WakeSystem = true;
      };
    };
+
+   services.gitea-admin-user = {
+     wantedBy = [ "multi-user.target" ];
+     after = [ "gitea.service" ];
+     serviceConfig = {
+       Type = "oneshot";
+       RemainAfterExit = true;
+       User = "gitea";
+     };
+     script = ''
+       while ! ${pkgs.curl}/bin/curl -sk https://localhost:${toString cfg.services.gitea.httpPort} > /dev/null; do
+         sleep 1
+       done
+       
+       ${config.services.gitea.package}/bin/gitea admin user create \
+         --admin \
+         --username admin \
+         --password "$(cat ${config.sops.secrets.gitea-admin-password.path})" \
+         --email admin@localhost \
+         --must-change-password=false \
+         -c ${config.services.gitea.stateDir}/custom/conf/app.ini \
+         || true
+     '';
+    };
   };
 }
