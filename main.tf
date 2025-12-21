@@ -28,6 +28,30 @@ resource "kubernetes_namespace" "gitea" {
   }
 }
 
+# Create secrets from sops-decrypted files
+resource "kubernetes_secret" "postgres" {
+  metadata {
+    name      = "postgres-secret"
+    namespace = kubernetes_namespace.gitea.metadata[0].name
+  }
+
+  data = {
+    password = file("/run/secrets/postgres-password")
+  }
+}
+
+resource "kubernetes_secret" "gitea_admin" {
+  metadata {
+    name      = "gitea-admin-secret"
+    namespace = kubernetes_namespace.gitea.metadata[0].name
+  }
+
+  data = {
+    username = "admin"
+    password = file("/run/secrets/gitea-admin-password")
+  }
+}
+
 # Deploy Gitea via Helm
 resource "helm_release" "gitea" {
   name       = "gitea"
@@ -52,14 +76,19 @@ resource "helm_release" "gitea" {
       
       gitea = {
         admin = {
-          username = "admin"
-          password = "changeme"  # Change this!
-          email = "admin@gitea.local"
+          existingSecret = kubernetes_secret.gitea_admin.metadata[0].name
         }
         config = {
           server = {
             DOMAIN = "192.168.1.76"
             ROOT_URL = "http://192.168.1.76:30300/"
+          }
+          database = {
+            DB_TYPE = "postgres"
+            HOST = "gitea-postgresql:5432"
+            NAME = "gitea"
+            USER = "gitea"
+            PASSWD = kubernetes_secret.postgres.data.password
           }
         }
       }

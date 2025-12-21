@@ -244,6 +244,8 @@
           "....." = "cd ../../../..";
           "......" = "cd ../../../../..";
           "docker" = "podman";
+          "cdn" = "cd ~/.config/nixos";
+          "k" = "kubectl";
         };
       };
   
