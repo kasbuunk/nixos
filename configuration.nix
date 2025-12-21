@@ -80,14 +80,11 @@ in
         # Expose internal services here.
         cfg.services.gitea.httpPort
         cfg.services.gitea.sshPort
-
-        # DNS disabled until a solution is found.
-        # 53
-        # 3000
+        cfg.services.adguard.httpPort
+        cfg.services.adguard.dnsPort
       ];
       allowedUDPPorts = [ 
-        # DNS disabled until a solution is found.
-        # 53
+        cfg.services.adguard.dnsPort
       ];
     };
 
@@ -142,7 +139,41 @@ in
   '';
 
   # DNS.
-  services.adguardhome.enable = false; # Look into cloud-native solutions.
+  services.adguardhome = {
+    enable = true;
+
+    # Web interface and DNS ports
+    port = cfg.services.adguard.httpPort;
+
+    settings = {
+      users = [{
+        name = "admin";
+        # Hash of the password - see 1password.
+        password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
+      }];
+      dns = {
+        bind_hosts = [ "0.0.0.0" ];
+        port = cfg.services.adguard.dnsPort;
+
+        # Upstream DNS servers (Cloudflare)
+        bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
+        upstream_dns = [ "1.1.1.1" "1.0.0.1" ];
+        
+        # Local domain rewrites for your services
+        rewrites = [
+          {
+            domain = "gitea.home";
+            answer = cfg.network.hostIp;
+          }
+          {
+            domain = "adguard.home";
+            answer = cfg.network.hostIp;
+          }
+          # Add more as you deploy services
+        ];
+      };
+    };
+  };
 
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
@@ -236,6 +267,7 @@ in
   environment.systemPackages = with pkgs; [
     _1password-gui
     age
+    apacheHttpd
     git
     kubectl
     kubernetes-helm
@@ -358,7 +390,7 @@ in
         };
         
         service = {
-          DISABLE_REGISTRATION = false; # Enable after creating admin
+          DISABLE_REGISTRATION = true; # Enable after creating admin
         };
       };
     };

@@ -7,6 +7,10 @@
   };
 
   services = {
+    adguard = {
+      httpPort = 3001;
+      dnsPort = 53;
+    };
     gitea = {
       httpPort = 30300;
       sshPort = 30222;
