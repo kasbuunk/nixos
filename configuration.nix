@@ -78,8 +78,8 @@ in
       allowedTCPPorts = [
         cfg.services.ssh.port
         # Expose internal services here.
-        # cfg.services.gitea.httpPort
-        # cfg.services.gitea.sshPort
+        cfg.services.gitea.httpPort
+        cfg.services.gitea.sshPort
 
         # DNS disabled until a solution is found.
         # 53
@@ -336,6 +336,32 @@ in
 
   # List services that you want to enable:
   services = {
+    gitea = {
+      enable = true;
+      
+      database = {
+        type = "postgres";
+        host = "/run/postgresql"; # Unix socket
+        name = "gitea";
+        user = "gitea";
+        # No password needed - uses peer authentication via unix socket
+      };
+
+      settings = {
+        server = {
+          DOMAIN = cfg.network.hostIp;
+          HTTP_ADDR = "0.0.0.0";
+          HTTP_PORT = cfg.services.gitea.httpPort;
+          ROOT_URL = "http://${cfg.network.hostIp}:${toString cfg.services.gitea.httpPort}/";
+          SSH_DOMAIN = cfg.network.hostIp;
+          SSH_PORT = cfg.services.gitea.sshPort;
+        };
+        
+        service = {
+          DISABLE_REGISTRATION = false; # Enable after creating admin
+        };
+      };
+    };
     postgresql = {
       enable = true;
       package = pkgs.postgresql_16;
