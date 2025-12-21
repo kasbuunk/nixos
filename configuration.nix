@@ -21,9 +21,6 @@
       gitea-admin-password = {
         owner = "root";
       };
-      gitea-db-password = {
-        owner = "root";
-      };
     };
   };
 
