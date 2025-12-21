@@ -19,11 +19,14 @@ in
     age.keyFile = "/home/kasbuunk/.config/sops/age/keys.txt";
   
     secrets = {
-      postgres-password = {
-        owner = "root";
+      postgres-admin-password = {
+        owner = "postgres";
+      };
+      postgres-gitea-password = {
+        owner = "gitea";
       };
       gitea-admin-password = {
-        owner = "root";
+        owner = "gitea";
       };
     };
   };
@@ -119,7 +122,11 @@ in
       enable = true;
       role = "server";
       extraFlags = [
-        "--disable=traefik"  # If you want your own ingress
+        # Disable traefik if you want your own ingress.
+        # Then also change the nodeport services to clusterIP to isolate them.
+        # This is simpler, it exposes all k3s services on the network, allows them
+        # on the firewall, etc.
+        "--disable=traefik"
         "--write-kubeconfig-mode=644"
       ];
     };
@@ -198,6 +205,16 @@ in
     # Default shell is fish.
     shell = pkgs.fish;
   };
+  
+  # Add this section to create the gitea system user
+  users.users.gitea = {
+    isSystemUser = true;
+    group = "gitea";
+    home = "/var/lib/gitea";
+    createHome = true;
+  };
+  
+  users.groups.gitea = {};
 
   # Keep SSH available.
   powerManagement.enable = false;
@@ -318,6 +335,32 @@ in
   };
 
   # List services that you want to enable:
+  services = {
+    postgresql = {
+      enable = true;
+      package = pkgs.postgresql_16;
+      
+      # Listen on localhost only (services connect via unix socket or localhost)
+      enableTCPIP = false;
+      
+      # Create databases and users for each service
+      ensureDatabases = [ "gitea" ];
+
+      ensureUsers = [
+        {
+          name = "gitea";
+          ensureDBOwnership = true;
+        }
+      ];
+    };
+
+    # Optional: manual backup with postgresqlBackup service
+    postgresqlBackup = {
+      enable = true;
+      databases = [ "gitea" ];
+      location = "/var/backup/postgresql";
+    };
+  };
 
   # Enable the OpenSSH daemon.
   services.openssh = {
