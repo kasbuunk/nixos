@@ -9,7 +9,8 @@ let
 in
 
 {
-  imports = [ # Include the results of the hardware scan.
+  imports = [
+    # Include the results of the hardware scan.
     ./hardware-configuration.nix
   ];
 
@@ -17,7 +18,7 @@ in
   sops = {
     defaultSopsFile = ./secrets.yaml;
     age.keyFile = "/home/kasbuunk/.config/sops/age/keys.txt";
-  
+
     secrets = {
       postgres-admin-password = {
         owner = "postgres";
@@ -62,14 +63,14 @@ in
   boot.loader.grub.enableCryptodisk = true;
 
   boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile = "/boot/crypto_keyfile.bin";
- 
+
   networking = {
     hostName = "nixos"; # Define your hostname.
 
     # Enables wireless support via wpa_supplicant.
     # This is mutually exlusive from the networkmanager below (I think).
     # wireless.enable = true;  
-  
+
     # Wake up server by sending a packet.
     interfaces.${cfg.network.interface} = {
       ipv4.addresses = [{
@@ -103,7 +104,7 @@ in
         cfg.services.adguard.dnsPort
         cfg.services.adguard.dnsOverTLSPort
       ];
-      allowedUDPPorts = [ 
+      allowedUDPPorts = [
         cfg.services.adguard.dnsPort
       ];
     };
@@ -182,6 +183,7 @@ in
         private_key_path = config.sops.secrets.adguard-tls-key.path;
       };
 
+
       dns = {
         bind_hosts = [ "0.0.0.0" ];
         port = cfg.services.adguard.dnsPort;
@@ -189,7 +191,7 @@ in
         # Upstream DNS servers (Cloudflare)
         bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
         upstream_dns = [ "1.1.1.1" "1.0.0.1" ];
-        
+
         # Local domain rewrites for your services
         rewrites = [
           {
@@ -231,7 +233,7 @@ in
       command = "${pkgs.nixos-rebuild}/bin/nixos-rebuild";
       options = [ "NOPASSWD" ];
     }];
-   }];
+  }];
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
@@ -265,13 +267,13 @@ in
 
     packages = with pkgs; [
       kdePackages.kate
-    #  thunderbird
+      #  thunderbird
     ];
 
     # Default shell is fish.
     shell = pkgs.fish;
   };
-  
+
   # Add this section to create the gitea system user
   users.users.gitea = {
     isSystemUser = true;
@@ -279,14 +281,14 @@ in
     home = "/var/lib/gitea";
     createHome = true;
   };
-  
-  users.groups.gitea = {};
+
+  users.groups.gitea = { };
 
   users.users.adguardhome = {
     isSystemUser = true;
     group = "adguardhome";
   };
-  users.groups.adguardhome = {};
+  users.groups.adguardhome = { };
 
 
   # Keep SSH available.
@@ -324,13 +326,13 @@ in
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    
+
     users.kasbuunk = { pkgs, ... }: {
       home = {
         stateVersion = "25.11";
         username = "kasbuunk";
         homeDirectory = "/home/kasbuunk";
-        
+
         sessionVariables = {
           EDITOR = "nvim";
           KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
@@ -345,7 +347,7 @@ in
           "k" = "kubectl";
         };
       };
-  
+
       programs = {
         alacritty = {
           enable = true;
@@ -413,7 +415,7 @@ in
   services = {
     gitea = {
       enable = true;
-      
+
       database = {
         type = "postgres";
         host = "/run/postgresql"; # Unix socket
@@ -438,7 +440,7 @@ in
           SSH_DOMAIN = cfg.services.gitea.hostName;
           SSH_PORT = cfg.services.gitea.sshPort;
         };
-        
+
         service = {
           DISABLE_REGISTRATION = true; # Enable after creating admin
         };
@@ -447,10 +449,10 @@ in
     postgresql = {
       enable = true;
       package = pkgs.postgresql_16;
-      
+
       # Listen on localhost only (services connect via unix socket or localhost)
       enableTCPIP = false;
-      
+
       # Create databases and users for each service
       ensureDatabases = [ "gitea" ];
 
@@ -499,58 +501,58 @@ in
     targets.hybrid-sleep.enable = false;
 
     services.nixos-autoupdate = {
-     serviceConfig = {
-       Type = "oneshot";
-       User = "root";
-     };
-     environment = {
-       SSH_AUTH_SOCK = ""; # Disable SSH agent
-     };
-     path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
-     script = ''
-       git config --global --add safe.directory /home/kasbuunk/.config/nixos
-       export GIT_SSH_COMMAND="ssh -i /root/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
-       cd /home/kasbuunk/.config/nixos/
-       git pull
-       nix flake update
-       git add flake.lock
-       git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
-       git push
-       nixos-rebuild switch --flake .#nixos
-     '';
-   };
+      serviceConfig = {
+        Type = "oneshot";
+        User = "root";
+      };
+      environment = {
+        SSH_AUTH_SOCK = ""; # Disable SSH agent
+      };
+      path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
+      script = ''
+        git config --global --add safe.directory /home/kasbuunk/.config/nixos
+        export GIT_SSH_COMMAND="ssh -i /root/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
+        cd /home/kasbuunk/.config/nixos/
+        git pull
+        nix flake update
+        git add flake.lock
+        git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
+        git push
+        nixos-rebuild switch --flake .#nixos
+      '';
+    };
 
-   timers.nixos-autoupdate = {
-     wantedBy = [ "timers.target" ];
-     timerConfig = {
-       OnCalendar = "daily";
-       Persistent = true;
-       WakeSystem = true;
-     };
-   };
+    timers.nixos-autoupdate = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+        WakeSystem = true;
+      };
+    };
 
-   services.gitea-admin-user = {
-     wantedBy = [ "multi-user.target" ];
-     after = [ "gitea.service" ];
-     serviceConfig = {
-       Type = "oneshot";
-       RemainAfterExit = true;
-       User = "gitea";
-     };
-     script = ''
-       while ! ${pkgs.curl}/bin/curl -sk https://localhost:${toString cfg.services.gitea.httpPort} > /dev/null; do
-         sleep 1
-       done
+    services.gitea-admin-user = {
+      wantedBy = [ "multi-user.target" ];
+      after = [ "gitea.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = "gitea";
+      };
+      script = ''
+        while ! ${pkgs.curl}/bin/curl -sk https://localhost:${toString cfg.services.gitea.httpPort} > /dev/null; do
+          sleep 1
+        done
        
-       ${config.services.gitea.package}/bin/gitea admin user create \
-         --admin \
-         --username admin \
-         --password "$(cat ${config.sops.secrets.gitea-admin-password.path})" \
-         --email admin@localhost \
-         --must-change-password=false \
-         -c ${config.services.gitea.stateDir}/custom/conf/app.ini \
-         || true
-     '';
+        ${config.services.gitea.package}/bin/gitea admin user create \
+          --admin \
+          --username admin \
+          --password "$(cat ${config.sops.secrets.gitea-admin-password.path})" \
+          --email admin@localhost \
+          --must-change-password=false \
+          -c ${config.services.gitea.stateDir}/custom/conf/app.ini \
+          || true
+      '';
     };
   };
 }
