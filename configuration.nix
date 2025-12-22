@@ -137,7 +137,7 @@ in
 
   services = {
     k3s = {
-      enable = true;
+      enable = false;
       role = "server";
       extraFlags = [
         # Disable traefik if you want your own ingress.
@@ -263,6 +263,9 @@ in
     openssh.authorizedKeys.keys = [
       # Public key NixOS HomeLab in 1Password.
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINo3te96zjiEAQnLe30m/zyzMtII+R3S4lsmLFgsJoZa"
+
+      # gitea public key in 1Password.
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL6GlOZP1Zt3MCD/NzWVPsuhoQSFil835qsQqzuktHmq"
     ];
 
     packages = with pkgs; [
@@ -290,14 +293,13 @@ in
   };
   users.groups.adguardhome = { };
 
-
   # Keep SSH available.
   powerManagement.enable = false;
 
   # Install firefox.
   programs.firefox.enable = true;
 
-  # Fish shell.
+  # Enable Fish shell.
   programs.fish.enable = true;
 
   # Enable flakes for version control.
@@ -410,6 +412,8 @@ in
     #   enableSSHSupport = true;
     # };
   };
+
+  programs.ssh.startAgent = true;
 
   # List services that you want to enable:
   services = {
