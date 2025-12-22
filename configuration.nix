@@ -436,7 +436,8 @@ in
           CERT_FILE = config.sops.secrets.gitea-tls-cert.path;
           KEY_FILE = config.sops.secrets.gitea-tls-key.path;
 
-
+          START_SSH_SERVER = true;
+          BUILTIN_SSH_SERVER_USER = "gitea";
           SSH_DOMAIN = cfg.services.gitea.hostName;
           SSH_PORT = cfg.services.gitea.sshPort;
         };
@@ -479,6 +480,7 @@ in
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
+      X11Forwarding = true;
     };
     extraConfig = ''
       ClientAliveInterval 60
