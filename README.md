@@ -157,6 +157,16 @@ sops secrets.yaml
 - Gitea: Auto-created via systemd service using `gitea-admin-password` secret
 - AdGuard: Set during initial configuration, stored in service state
 
+## Media
+
+Download media to a directory accessible by Jellyfin. 
+
+Movies: `/var/lib/jellyfin/media/Movies`
+
+## Torrent
+
+Create a directory in `~/Downloads/torrent`, change ownership to transmission:transmission and give it 755 permissions. Otherwise the transmission user cannot write to this directory and still reports success without any logs in journalctl. 
+
 ## In progress
 
 Currently I am having trouble setting up the ssh configuration such that I can use 1password from both the nixos server itself and my private device. The issue is that when I am pointing the ssh config to the 1password agent socket, that means it overrides when I connect from a remote device, even with ssh forwarding enabled. So for the time being I set the identity agent with the environment variable `SSH_AUTH_SOCK`, but this only works remotely. I also just created an ssh key for gitea especially so it can use that to authenticate, which works from all devices. But then from the nixos server itself I can't use any ssh keys from 1password. Do I need 1password at all on that machine (programmatically, using the agent socket)?

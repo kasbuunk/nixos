@@ -8,16 +8,20 @@
 
   services = {
     adguard = {
-      hostName = "adguard.home";
+      hostName = "dns.home";
       httpPort = 3001;
       httpsPort = 3002;
       dnsPort = 53;
       dnsOverTLSPort = 853;
     };
     gitea = {
-      hostName = "gitea.home";
+      hostName = "git.home";
       httpPort = 30300;
       sshPort = 30222;
+    };
+    jellyfin = {
+      hostName = "media.home";
+      httpPort = 8096;
     };
     ssh = {
       port = 22;

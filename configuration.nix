@@ -103,6 +103,7 @@ in
         cfg.services.adguard.httpsPort
         cfg.services.adguard.dnsPort
         cfg.services.adguard.dnsOverTLSPort
+        cfg.services.jellyfin.httpPort
       ];
       allowedUDPPorts = [
         cfg.services.adguard.dnsPort
@@ -195,11 +196,15 @@ in
         # Local domain rewrites for your services
         rewrites = [
           {
-            domain = "gitea.home";
+            domain = cfg.services.gitea.hostName;
             answer = cfg.network.hostIp;
           }
           {
-            domain = "adguard.home";
+            domain = cfg.services.adguard.hostName;
+            answer = cfg.network.hostIp;
+          }
+          {
+            domain = cfg.services.jellyfin.hostName;
             answer = cfg.network.hostIp;
           }
           # Add more as you deploy services
@@ -249,6 +254,11 @@ in
     # use the example session manager (no others are packaged yet so this is enabled by default,
     # no need to redefine it in your config for now)
     #media-session.enable = true;
+  };
+
+  services.jellyfin = {
+    enable = true;
+    openFirewall = false; 
   };
 
   # Enable touchpad support (enabled default in most desktopManager).
@@ -322,6 +332,7 @@ in
     opentofu
     sops
     vim
+    wget
     xclip
   ];
 
@@ -474,6 +485,19 @@ in
       enable = true;
       databases = [ "gitea" ];
       location = "/var/backup/postgresql";
+    };
+
+    transmission = {
+      enable = true;
+      settings = {
+        download-dir = "/home/kasbuunk/Downloads/torrent";
+        rpc-bind-address = "0.0.0.0";
+        rpc-whitelist-enabled = false;
+        upload-limit = 0;
+        upload-limit-enabled = true;
+        ratio-limit = 0;
+        ratio-limit-enabled = true;
+      };
     };
   };
 
