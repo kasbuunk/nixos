@@ -23,6 +23,10 @@
       hostName = "media.home";
       httpPort = 8096;
     };
+    immich = {
+      port = 2283;
+      mediaLocation = "/mnt/nas/data/photos";
+    };
     ssh = {
       port = 22;
     };

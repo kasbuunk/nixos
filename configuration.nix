@@ -113,6 +113,7 @@ in
         cfg.services.adguard.dnsPort
         cfg.services.adguard.dnsOverTLSPort
         cfg.services.jellyfin.httpPort
+        cfg.services.immich.port
         cfg.nas.tcp1
         cfg.nas.tcp2
       ];
@@ -214,6 +215,15 @@ in
         addresses = true;
         userServices = true;
       };
+    };
+
+    # Home photos and videos.
+    immich = {
+      enable = true;
+      port = cfg.services.immich.port;
+      # Use your NAS as the storage location
+      mediaLocation = cfg.services.immich.mediaLocation;
+      host = "0.0.0.0";
     };
   };
 
@@ -398,6 +408,7 @@ in
     _1password-gui
     age
     apacheHttpd
+    e2fsprogs
     git
     jq
     kubectl
@@ -405,6 +416,7 @@ in
     neovim
     openssl_oqs
     opentofu
+    parted
     sops
     vim
     wget
