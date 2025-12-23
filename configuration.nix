@@ -51,6 +51,10 @@ in
         owner = "systemd-network";
         mode = "0400";
       };
+      restic-password = {
+        owner = "root";
+        mode = "0400";
+      };
     };
   };
 
@@ -233,6 +237,12 @@ in
     options = [ "nofail" "users" ];
   };
 
+  fileSystems.${cfg.backup.mountPoint} = {
+    device = cfg.backup.deviceName;
+    fsType = cfg.backup.format;
+    options = [ "nofail" "users" ];
+  };
+
   environment.etc."rancher/k3s/config.yaml".text = ''
     write-kubeconfig-mode: "0644"
     tls-san:
@@ -387,6 +397,9 @@ in
   # Add Jellyfin to your user group so it can read your NAS files.
   users.users.jellyfin.extraGroups = [ "users" "kasbuunk" ];
 
+  # Permission glue to let me and jellyfin access the transmission group.
+  users.groups.transmission.members = [ "kasbuunk" "jellyfin" ];
+
   # Keep SSH available.
   powerManagement.enable = false;
 
@@ -417,6 +430,7 @@ in
     openssl_oqs
     opentofu
     parted
+    ripgrep
     sops
     vim
     wget
@@ -575,19 +589,53 @@ in
       location = "/var/backup/postgresql";
     };
 
+    restic.backups.local = {
+      user = "root"; # Default.
+      initialize = true;
+      paths = cfg.backup.paths;
+      repository = "${cfg.backup.mountPoint}/restic";
+      passwordFile = config.sops.secrets.restic-password.path;
+
+      # Run this daily at 3:00 AM (one hour after your cloud job).
+      timerConfig = {
+        OnCalendar = "03:00";
+        RandomizedDelaySec = "30min";
+        Persistent = true;
+      };
+
+      # Your custom retention policy: keep plenty of recent, fewer old.
+      pruneOpts = [
+        "--keep-daily 7"    # Last 7 days
+        "--keep-weekly 4"   # Last 4 weeks
+        "--keep-monthly 6"  # Last 6 months
+        "--keep-yearly 5"   # Last 2 years
+      ];
+    };
+
     transmission = {
       enable = true;
       settings = {
         download-dir = "/home/kasbuunk/Downloads/torrent";
-        rpc-bind-address = "0.0.0.0";
+        # download-dir = "${cfg.nas.mountPoint}/data/torrents";
+        # incomplete-dir = "${cfg.nas.mountPoint}/data/torrents/.incomplete";
+        # incomplete-dir-enabled = true;
+
+        # Network/Access settings.
+        rpc-bind-address = "0.0.0.0"; # Allows you to control it from your MacBook
+        rpc-whitelist = "127.0.0.1,192.168.*.*";
         rpc-whitelist-enabled = false;
+
+        # Permissions (Crucial!)
+        # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
+        umask = 2;
+
         upload-limit = 0;
         upload-limit-enabled = true;
         ratio-limit = 0;
         ratio-limit-enabled = true;
 
         # Bind to VPN interface only.
-        bind-address-ipv4 = "10.2.0.2";  # Your VPN IP
+        bind-address-ipv4 = "10.2.0.2";  # VPN IP.
         peer-port-random-on-start = true;
       };
     };

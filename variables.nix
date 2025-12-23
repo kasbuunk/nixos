@@ -33,6 +33,7 @@
   };
 
   nas = {
+    # Configure during naming, formatting and partitioning.
     mountPoint = "/mnt/nas";
     format = "ext4";
     deviceName = "/dev/disk/by-label/nasdata";
@@ -40,5 +41,11 @@
     tcp2 = 139;
     udp1 = 137;
     udp2 = 138;
+  };
+  backup = {
+    mountPoint = "/mnt/backup";
+    format = "ext4";
+    deviceName = "/dev/disk/by-label/nasdata-backup";
+    paths = [ "/mnt/nas/data" ]; # Directories to back up.
   };
 }
