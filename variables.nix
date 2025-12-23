@@ -27,4 +27,14 @@
       port = 22;
     };
   };
+
+  nas = {
+    mountPoint = "/mnt/nas";
+    format = "ext4";
+    deviceName = "/dev/disk/by-label/nasdata";
+    tcp1 = 445;
+    tcp2 = 139;
+    udp1 = 137;
+    udp2 = 138;
+  };
 }

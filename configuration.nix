@@ -47,6 +47,10 @@ in
         owner = "adguardhome";
         mode = "0444";
       };
+      wireguard-private-key = {
+        owner = "systemd-network";
+        mode = "0400";
+      };
     };
   };
 
@@ -60,9 +64,14 @@ in
     "/boot/crypto_keyfile.bin" = null;
   };
 
+  boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile = "/boot/crypto_keyfile.bin";
+
   boot.loader.grub.enableCryptodisk = true;
 
-  boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile = "/boot/crypto_keyfile.bin";
+  boot.supportedFilesystems = [ "zfs" ];
+  networking.hostId = "02ba2494"; # Required for ZFS.
+
+  services.zfs.autoScrub.enable = true; # Keeping data healthy.
 
   networking = {
     hostName = "nixos"; # Define your hostname.
@@ -104,14 +113,36 @@ in
         cfg.services.adguard.dnsPort
         cfg.services.adguard.dnsOverTLSPort
         cfg.services.jellyfin.httpPort
+        cfg.nas.tcp1
+        cfg.nas.tcp2
       ];
       allowedUDPPorts = [
         cfg.services.adguard.dnsPort
+        cfg.nas.udp1
+        cfg.nas.udp2
       ];
     };
 
     # Or disable the firewall altogether.
     # networking.firewall.enable = false;
+
+    wg-quick.interfaces = {
+      wg0 = {
+        address = [ "10.2.0.2/32" ];
+        dns = [ "10.2.0.1" ];
+        privateKeyFile = config.sops.secrets.wireguard-private-key.path;
+        
+        peers = [{
+          publicKey = "5pQdM0t5q7L83x58nIkdy8Nx6lfkBj0AB2MkuVqWeFE=";
+          allowedIPs = [ "0.0.0.0/0" "::/0" ];
+          endpoint = "185.165.241.179:51820";
+          persistentKeepalive = 25;
+        }];
+        
+        autostart = false;  # Manual control
+        table = "auto";
+      };
+    };
   };
 
   # Set your time zone.
@@ -149,6 +180,47 @@ in
         "--write-kubeconfig-mode=644"
       ];
     };
+
+    samba = {
+      enable = true;
+      openFirewall = true;
+      settings = {
+        global = {
+          "workgroup" = "WORKGROUP";
+          "server string" = "nixos-nas";
+          "netbios name" = "nixos";
+          "security" = "user";
+          "guest account" = "nobody";
+          "map to guest" = "bad user";
+        };
+        "nas" = {
+          "path" = cfg.nas.mountPoint;
+          "browseable" = "yes";
+          "read only" = "no";
+          "guest ok" = "no"; # Safer: Requires a password
+          "create mask" = "0644";
+          "directory mask" = "0755";
+          "force user" = "kasbuunk";
+        };
+      };
+    };
+
+    # Enable mDNS (Avahi) so your NAS shows up in sidebars automatically
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      publish = {
+        enable = true;
+        addresses = true;
+        userServices = true;
+      };
+    };
+  };
+
+  fileSystems.${cfg.nas.mountPoint} = {
+    device = cfg.nas.deviceName;
+    fsType = cfg.nas.format;
+    options = [ "nofail" "users" ];
   };
 
   environment.etc."rancher/k3s/config.yaml".text = ''
@@ -279,8 +351,8 @@ in
     ];
 
     packages = with pkgs; [
+      # Most packages are installed system-wide.
       kdePackages.kate
-      #  thunderbird
     ];
 
     # Default shell is fish.
@@ -294,7 +366,6 @@ in
     home = "/var/lib/gitea";
     createHome = true;
   };
-
   users.groups.gitea = { };
 
   users.users.adguardhome = {
@@ -302,6 +373,9 @@ in
     group = "adguardhome";
   };
   users.groups.adguardhome = { };
+
+  # Add Jellyfin to your user group so it can read your NAS files.
+  users.users.jellyfin.extraGroups = [ "users" "kasbuunk" ];
 
   # Keep SSH available.
   powerManagement.enable = false;
@@ -325,6 +399,7 @@ in
     age
     apacheHttpd
     git
+    jq
     kubectl
     kubernetes-helm
     neovim
@@ -358,6 +433,7 @@ in
           "docker" = "podman";
           "cdn" = "cd ~/.config/nixos";
           "k" = "kubectl";
+          "vim" = "nvim";
         };
       };
 
@@ -497,9 +573,18 @@ in
         upload-limit-enabled = true;
         ratio-limit = 0;
         ratio-limit-enabled = true;
+
+        # Bind to VPN interface only.
+        bind-address-ipv4 = "10.2.0.2";  # Your VPN IP
+        peer-port-random-on-start = true;
       };
     };
   };
+
+  systemd.services.transmission.after = [ "wg-quick-wg0.service" ];
+  systemd.services.transmission.requires = [ "wg-quick-wg0.service" ];
+  systemd.services.transmission.bindsTo = [ "wg-quick-wg0.service" ];
+
 
   # Enable the OpenSSH daemon.
   services.openssh = {
@@ -543,11 +628,13 @@ in
         git config --global --add safe.directory /home/kasbuunk/.config/nixos
         export GIT_SSH_COMMAND="ssh -i /root/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
         cd /home/kasbuunk/.config/nixos/
-        git pull
+        git pull origin
+        # git pull lab
         nix flake update
         git add flake.lock
         git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
-        git push
+        git push origin
+        # git push lab
         nixos-rebuild switch --flake .#nixos
       '';
     };

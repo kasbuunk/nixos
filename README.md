@@ -144,6 +144,7 @@ Add new service DNS entries in AdGuard Home:
 - **Gitea:** `https://gitea.home:3000` - Git server
 - **AdGuard Home:** `https://adguard.home:3002` - DNS and ad blocking
 - **PostgreSQL:** Local database (port 5432, unix socket only)
+- Samba (NAS): Network storage at /mnt/nas
 
 ### Service Credentials
 
@@ -166,6 +167,66 @@ Movies: `/var/lib/jellyfin/media/Movies`
 ## Torrent
 
 Create a directory in `~/Downloads/torrent`, change ownership to transmission:transmission and give it 755 permissions. Otherwise the transmission user cannot write to this directory and still reports success without any logs in journalctl. 
+
+## VPN
+
+Start VPN with: `sudo systemctl restart wg-quick-wg0`.
+
+Check it's activated in different ways: 
+
+```sh
+sudo wg show # Shows interface status, peer, latest handshake time, and transfer amounts.
+
+ip route | grep wg0 # Should show your VPN provider's IP, not your real IP.
+
+curl https://am.i.mullvad.net/json # Tests DNS leak.
+
+curl ifconfig.me # Should show your VPN provider's IP, not your real IP.
+```
+
+If sudo wg show shows a recent handshake and curl ifconfig.me shows a different IP than usual, you're connected.
+
+## NAS Setup
+
+The NAS uses an external Samsung T7 SSD. Because this drive often arrives with vendor partitions or ISOs, it must be manually prepared before the NixOS `fileSystems` config can mount it.
+
+### 1. Format the Drive (One-time)
+
+Run these commands to wipe the drive and create a single EXT4 partition labeled `nasdata`:
+
+```bash
+nix-shell -p parted e2fsprogs
+sudo parted /dev/sda -- mklabel gpt
+sudo parted /dev/sda -- mkpart primary ext4 0% 100%
+sudo mkfs.ext4 -L nasdata /dev/sda1
+exit
+```
+
+### 2. Set Permissions
+
+Once NixOS mounts the drive at /mnt/nas, ensure your user owns it:
+
+```bash
+sudo chown -R kasbuunk:users /mnt/nas
+sudo chmod -R 755 /mnt/nas
+```
+
+### 3. Create Samba Password
+
+Samba maintains its own user database. You must manually add your user to it:
+
+```bash
+sudo smbpasswd -a kasbuunk
+```
+
+Accessing the NAS
+From macOS
+
+1. Open Finder and press Cmd + K.
+
+2. Enter smb://nixos.local (or the server IP).
+
+3. Connect as a Registered User using your Linux username and the Samba password created above.
 
 ## In progress
 
