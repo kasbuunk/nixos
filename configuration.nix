@@ -72,11 +72,6 @@ in
 
   boot.loader.grub.enableCryptodisk = true;
 
-  boot.supportedFilesystems = [ "zfs" ];
-  networking.hostId = "02ba2494"; # Required for ZFS.
-
-  services.zfs.autoScrub.enable = true; # Keeping data healthy.
-
   networking = {
     hostName = "nixos"; # Define your hostname.
 
@@ -439,6 +434,7 @@ in
     kubectl
     kubernetes-helm
     neovim
+    nixfmt-rfc-style
     openssl_oqs
     opentofu
     parted
