@@ -84,20 +84,23 @@ in
     # This is mutually exlusive from the networkmanager below (I think).
     # wireless.enable = true;  
 
-    # Wake up server by sending a packet.
-    interfaces.${cfg.network.interface} = {
-      ipv4.addresses = [{
-        address = cfg.network.hostIp;
-        prefixLength = 24;
-      }];
-
-      wakeOnLan.enable = true;
-    };
-
     # Enable networking
     networkmanager.enable = true;
+    networkmanager.ensureProfiles.profiles = {
+      "lan-connection" = {
+        connection = {
+          id = "lan-connection";
+          type = "ethernet";
+          interface-name = cfg.network.interface;
+        };
+        ipv4 = {
+          method = "manual";
+          address1 = "${cfg.network.hostIp}/24,${cfg.network.gateway}";
+          dns = cfg.network.dns;
+        };
+      };
+    };
 
-    defaultGateway = cfg.network.gateway;
     nameservers = [ cfg.network.dns ]; # Cloudflare's DNS.
 
     # Configure network proxy if necessary
@@ -127,9 +130,6 @@ in
         cfg.nas.udp2
       ];
     };
-
-    # Or disable the firewall altogether.
-    # networking.firewall.enable = false;
   };
 
   # VPN namespace configuration.
