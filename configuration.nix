@@ -443,6 +443,7 @@ in
     opentofu
     parted
     ripgrep
+    rustup
     sops
     vim
     wget
@@ -490,6 +491,17 @@ in
             { name = "fzf"; src = fzf-fish.src; } # better than built-in fzf keybinds
           ];
           shellInit = ''
+          # Check if we are in an SSH session (Remote)
+          if test -n "$SSH_CONNECTION"
+              # We are remote: Do nothing. Use the socket forwarded by SSH.
+              echo "Remote session detected. Using forwarded SSH agent."
+          else
+              # We are local (GUI/Console): Point to 1Password
+              # (Ensure you enabled the SSH Agent in 1Password Developer Settings)
+              if test -S ~/.1password/agent.sock
+                  set -x SSH_AUTH_SOCK ~/.1password/agent.sock
+              end
+          end
           '';
         };
         fzf = {
@@ -633,15 +645,17 @@ in
         # incomplete-dir-enabled = true;
 
         # Network/Access settings.
-        rpc-bind-address = "192.168.15.1"; # Allows to control it from devices on the network.
+        # Bind to 0.0.0.0 so it listens to requests coming from the "Port Mapping"
+        rpc-bind-address = "0.0.0.0";
+        # Allow access from the LAN (192.168.*.*)
         rpc-whitelist = "127.0.0.1,192.168.*.*";
-        rpc-whitelist-enabled = false;
+        rpc-whitelist-enabled = true;
 
         # Permissions (Crucial!)
         # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
         umask = 2;
 
-	# Possibly this excludes from seeders.
+        # Possibly this excludes from seeders.
         # upload-limit = 0;
         # upload-limit-enabled = true;
         # ratio-limit = 0.1;
@@ -696,14 +710,30 @@ in
       };
       path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
       script = ''
+        # 1. Setup Git
         git config --global --add safe.directory /home/kasbuunk/.config/nixos
         export GIT_SSH_COMMAND="ssh -i /root/.ssh/nixos-autoupdate -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
         cd /home/kasbuunk/.config/nixos/
         git pull origin main
+
+        # 2. Update Flake Lockfile
         nix flake update
+
+        # 3. SAFETY CHECK: Dry Run
+        # If this fails, the script stops here and doesn't break the system.
+        echo "Running dry-activate..."
+        nixos-rebuild dry-activate --flake .#nixos || exit 1
+
+        # 4. Commit and Push.
         git add flake.lock
-        git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock" || true
-        git push origin main
+        # Only commit if there are changes
+        if ! git diff --cached --quiet; then
+          git -c commit.gpgsign=false commit -m "chore: auto-update flake.lock"
+          git push origin main
+        fi
+
+        # 5. Apply Changes
+        echo "Switching to new configuration..."
         nixos-rebuild switch --flake .#nixos
       '';
     };
