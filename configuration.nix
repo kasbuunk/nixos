@@ -47,8 +47,8 @@ in
         owner = "adguardhome";
         mode = "0444";
       };
-      wireguard-private-key = {
-        owner = "systemd-network";
+      wireguard-config = {
+        owner = "root";
         mode = "0400";
       };
       restic-password = {
@@ -130,24 +130,26 @@ in
 
     # Or disable the firewall altogether.
     # networking.firewall.enable = false;
+  };
 
-    wg-quick.interfaces = {
-      wg0 = {
-        address = [ "10.2.0.2/32" ];
-        dns = [ "10.2.0.1" ];
-        privateKeyFile = config.sops.secrets.wireguard-private-key.path;
-        
-        peers = [{
-          publicKey = "5pQdM0t5q7L83x58nIkdy8Nx6lfkBj0AB2MkuVqWeFE=";
-          allowedIPs = [ "0.0.0.0/0" "::/0" ];
-          endpoint = "185.165.241.179:51820";
-          persistentKeepalive = 25;
-        }];
-        
-        autostart = false;  # Manual control
-        table = "auto";
-      };
-    };
+  # VPN namespace configuration.
+  vpnNamespaces.wg = {
+    enable = true;
+    wireguardConfigFile = config.sops.secrets.wireguard-config.path;
+    accessibleFrom = [ 
+      "192.168.1.0/24" # LAN.
+      "127.0.0.1/32" # Localhost.
+    ]; # LAN can access services.
+    portMappings = [{
+      from = 9091;
+      to = 9091; # Transmission web UI.
+    }];
+
+    # Allow port forwarding from this network interface.
+    openVPNPorts = [{ 
+     port = 9091;
+     protocol = "tcp";
+    }];
   };
 
   # Set your time zone.
@@ -257,6 +259,7 @@ in
     enable = true;
 
     # Web interface and DNS ports
+    host = "0.0.0.0"; # Both local and LAN.
     port = cfg.services.adguard.httpPort;
 
     settings = {
@@ -278,12 +281,20 @@ in
 
 
       dns = {
-        bind_hosts = [ "0.0.0.0" ];
+        bind_hosts = [ cfg.network.hostIp "127.0.0.1" ];
         port = cfg.services.adguard.dnsPort;
 
-        # Upstream DNS servers (Cloudflare)
+        # Upstream DNS servers (Cloudflare).
         bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
-        upstream_dns = [ "1.1.1.1" "1.0.0.1" ];
+        upstream_dns = [ 
+	  "1.1.1.1" # Route through the gateway.
+	  "1.0.0.1" 
+	  # "1.1.1.1@${cfg.network.gateway}" # Route through the gateway.
+	  # "1.0.0.1@${cfg.network.gateway}" 
+	];
+
+	# Force upstream queries to bypass VPN by binding to LAN interface.
+	upstream_dns_file = "";
 
         # Local domain rewrites for your services
         rewrites = [
@@ -621,7 +632,7 @@ in
         # incomplete-dir-enabled = true;
 
         # Network/Access settings.
-        rpc-bind-address = "0.0.0.0"; # Allows you to control it from your MacBook
+        rpc-bind-address = "192.168.15.1"; # Allows to control it from devices on the network.
         rpc-whitelist = "127.0.0.1,192.168.*.*";
         rpc-whitelist-enabled = false;
 
@@ -629,22 +640,16 @@ in
         # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
         umask = 2;
 
-        upload-limit = 0;
-        upload-limit-enabled = true;
-        ratio-limit = 0;
-        ratio-limit-enabled = true;
+	# Possibly this excludes from seeders.
+        # upload-limit = 0;
+        # upload-limit-enabled = true;
+        # ratio-limit = 0.1;
+        # ratio-limit-enabled = true;
 
-        # Bind to VPN interface only.
-        bind-address-ipv4 = "10.2.0.2";  # VPN IP.
         peer-port-random-on-start = true;
       };
     };
   };
-
-  systemd.services.transmission.after = [ "wg-quick-wg0.service" ];
-  systemd.services.transmission.requires = [ "wg-quick-wg0.service" ];
-  systemd.services.transmission.bindsTo = [ "wg-quick-wg0.service" ];
-
 
   # Enable the OpenSSH daemon.
   services.openssh = {
@@ -674,6 +679,11 @@ in
     targets.suspend.enable = false;
     targets.hibernate.enable = false;
     targets.hybrid-sleep.enable = false;
+
+    services.transmission.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "wg";
+    };
 
     services.nixos-autoupdate = {
       serviceConfig = {

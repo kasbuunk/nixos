@@ -9,15 +9,17 @@
     };
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix }: {
+  outputs = { self, nixpkgs, home-manager, sops-nix, vpn-confinement }: {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./configuration.nix
         home-manager.nixosModules.home-manager
         sops-nix.nixosModules.sops
+	vpn-confinement.nixosModules.default
       ];
     };
   };
