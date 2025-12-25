@@ -17,7 +17,7 @@ in
   # Secret management.
   sops = {
     defaultSopsFile = ./secrets.yaml;
-    age.keyFile = "/home/kasbuunk/.config/sops/age/keys.txt";
+    age.keyFile = "/var/lib/sops-nix/key.txt";
 
     secrets = {
       postgres-admin-password = {
@@ -265,7 +265,8 @@ in
     settings = {
       users = [{
         name = "admin";
-        # Hash of the password - see 1password.
+        # bcrypt hash of the password - see 1password.
+        # Generate new one with: htpasswd -B -n -b admin "my-password"
         password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
       }];
 
