@@ -4,6 +4,7 @@
     gateway = "192.168.1.1";
     dns = "1.1.1.1";
     interface = "wlp11s0f3u4";
+    vpnPort = 51820;
   };
 
   services = {
@@ -13,6 +14,10 @@
       httpsPort = 3002;
       dnsPort = 53;
       dnsOverTLSPort = 853;
+    };
+    caddy = {
+      httpPort = 80;
+      httpsPort = 443;
     };
     gitea = {
       hostName = "git.home";
@@ -29,6 +34,14 @@
     };
     ssh = {
       port = 22;
+    };
+    loki = {
+      dataDir = "/mnt/nas/data/log";
+      httpPort = 3100;
+    };
+    grafana = {
+      httpPort = 3000;
+      hostName = "grafana.home";
     };
   };
 

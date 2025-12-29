@@ -47,13 +47,32 @@ in
         owner = "adguardhome";
         mode = "0444";
       };
+
+      # VPN Client.
       wireguard-config = {
+        owner = "root";
+        mode = "0400";
+      };
+      # VPN Server.
+      wireguard-server-private-key = {
         owner = "root";
         mode = "0400";
       };
       restic-password = {
         owner = "root";
         mode = "0400";
+      };
+      grafana-admin-password = {
+        owner = "grafana";
+      };
+      grafana-secret-key = {
+        owner = "grafana";
+      };
+      ca-cert = {
+        owner = "caddy";
+      };
+      ca-key = {
+        owner = "caddy";
       };
     };
   };
@@ -116,6 +135,9 @@ in
         cfg.services.adguard.dnsOverTLSPort
         cfg.services.jellyfin.httpPort
         cfg.services.immich.port
+	cfg.services.grafana.httpPort
+	cfg.services.caddy.httpPort
+	cfg.services.caddy.httpsPort
         cfg.nas.tcp1
         cfg.nas.tcp2
       ];
@@ -123,6 +145,27 @@ in
         cfg.services.adguard.dnsPort
         cfg.nas.udp1
         cfg.nas.udp2
+	cfg.network.vpnPort
+      ];
+    };
+
+    wireguard.interfaces.wg0 = {
+      ips = [ "10.0.0.1/24" ];
+      listenPort = cfg.network.vpnPort;
+
+      privateKeyFile = config.sops.secrets.wireguard-server-private-key.path;
+
+      peers = [
+        {
+	  name = "phone";
+	  publicKey = "LP8gDDyNvldcc/lVkuP8pjEMGTx4DRGeG8FHujrJ8Dw=";
+	  allowedIPs = [ "10.0.0.2/32" ];
+	}
+        {
+	  name = "laptop";
+	  publicKey = "mMIzeWJbhUKCAybziDFueRJ/i9qPQYzW/UZORdX2zzc=";
+	  allowedIPs = [ "10.0.0.3/32" ];
+	}
       ];
     };
   };
@@ -170,6 +213,40 @@ in
   services.desktopManager.plasma6.enable = true;
 
   services = {
+    caddy = {
+      enable = true;
+      virtualHosts = {
+        # Gitea.
+	"https://${cfg.services.gitea.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy localhost:${toString cfg.services.gitea.httpPort}
+	  '';
+	};
+        # Jellyfin.
+	"https://${cfg.services.jellyfin.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy localhost:${toString cfg.services.jellyfin.httpPort}
+	  '';
+	};
+        # AdGuard.
+	"https://${cfg.services.adguard.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy localhost:${toString cfg.services.adguard.httpPort}
+	  '';
+	};
+        # Grafana.
+	"https://${cfg.services.grafana.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort}
+	  '';
+	};
+      };
+    };
+
     k3s = {
       enable = false;
       role = "server";
@@ -226,6 +303,337 @@ in
       mediaLocation = cfg.services.immich.mediaLocation;
       host = "0.0.0.0";
     };
+
+    # Loki - log storage.
+    loki = {
+      enable = true;
+      dataDir = cfg.services.loki.dataDir;
+      configuration = {
+        auth_enabled = false; # Secure access via Grafana.
+        server = {
+	  http_listen_address = "127.0.0.1";
+	  http_listen_port = cfg.services.loki.httpPort;
+	  grpc_listen_address = "127.0.0.1";
+	};
+
+        common = {
+          instance_addr = "127.0.0.1";
+          path_prefix = cfg.services.loki.dataDir;
+          storage.filesystem = {
+            chunks_directory = "${cfg.services.loki.dataDir}/chunks";
+            rules_directory = "${cfg.services.loki.dataDir}/rules";
+          };
+          replication_factor = 1;
+          ring.kvstore.store = "inmemory";
+        };
+
+        schema_config.configs = [{
+          from = "2024-01-01";
+          store = "tsdb";  # Modern storage backend
+          object_store = "filesystem";
+          schema = "v13";
+          index = {
+            prefix = "index_";
+            period = "24h";
+          };
+        }];
+
+        storage_config = {
+	  filesystem.directory = "${cfg.services.loki.dataDir}/chunks";
+	  tsdb_shipper = {
+	    active_index_directory = "${cfg.services.loki.dataDir}/index";
+	    cache_location = "${cfg.services.loki.dataDir}/index_cache";
+	  };
+        };
+
+        compactor = {
+          working_directory = "${cfg.services.loki.dataDir}/compactor";
+          retention_enabled = true;
+          retention_delete_delay = "2h";
+	  compaction_interval = "10m";
+	  delete_request_store = "filesystem";
+        };
+
+        limits_config = {
+          retention_period = "720h"; # 30 days.
+          reject_old_samples = true;
+          reject_old_samples_max_age = "168h";
+
+          max_streams_per_user = 10000;
+	  max_global_streams_per_user = 10000;
+        };
+      };
+    };
+
+    # Promtail - ships journald logs to Loki.
+    promtail = {
+      enable = true;
+      configuration = {
+        server = {
+          http_listen_port = 9080;
+          grpc_listen_port = 0;
+        };
+
+        positions.filename = "/var/lib/promtail/positions.yaml";
+
+        clients = [{
+          url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}/loki/api/v1/push";
+        }];
+
+        scrape_configs = [{
+          job_name = "journal";
+          journal = {
+            max_age = "12h";
+            labels = {
+              job = "systemd-journal";
+              host = config.networking.hostName;
+            };
+          };
+	  pipeline_stages = [
+            # Drop noisy units entirely
+            {
+              match = {
+		selector = "{unit=~\"session-.*\\\\.scope\"}";
+                action = "drop";
+              };
+            }
+            # Extract log level
+            {
+              regex = {
+                expression = "^(?P<level>DEBUG|INFO|WARN|ERROR|FATAL)";
+              };
+            }
+            {
+              labels = {
+                level = "";
+              };
+            }
+          ];
+          relabel_configs = [
+            {
+              source_labels = ["__journal__systemd_unit"];
+              target_label = "unit";
+            }
+          ];
+        }];
+      };
+    };
+  
+    # Grafana - visualization
+    grafana = {
+      enable = true;
+      settings = {
+        server = {
+          http_addr = "0.0.0.0"; # Expose to LAN.
+          http_port = cfg.services.grafana.httpPort;
+          # Force login.
+          enforce_domain = true;
+        };
+
+	security = {
+	  admin_user = "admin";
+	  admin_password = "$__file{${config.sops.secrets.grafana-admin-password.path}}";
+	  secret_key = "$__file{${config.sops.secrets.grafana-secret-key.path}}";
+	};
+	"auth.anonymous" = {
+	  enabled = false; # No anonymous access.
+	};
+      };
+      
+      provision = {
+        enable = true;
+        datasources.settings.datasources = [{
+          name = "Loki";
+          type = "loki";
+          access = "proxy";
+          url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}";
+          isDefault = true;
+        }];
+      };
+    };
+
+    jellyfin = {
+      enable = true;
+      openFirewall = false; 
+    };
+
+    # DNS.
+    adguardhome = {
+      enable = true;
+
+      # Web interface and DNS ports
+      host = "0.0.0.0"; # Both local and LAN.
+      port = cfg.services.adguard.httpPort;
+
+      settings = {
+        users = [{
+          name = "admin";
+          # bcrypt hash of the password - see 1password.
+          # Generate new one with: htpasswd -B -n -b admin "my-password"
+          password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
+        }];
+
+        dns = {
+          bind_hosts = [ cfg.network.hostIp "127.0.0.1" ];
+          port = cfg.services.adguard.dnsPort;
+
+          # Upstream DNS servers (Cloudflare).
+          bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
+          upstream_dns = [ 
+            "1.1.1.1" # Route through the gateway.
+            "1.0.0.1" 
+          ];
+
+          # Force upstream queries to bypass VPN by binding to LAN interface.
+          upstream_dns_file = "";
+
+          # Local domain rewrites for your services
+          rewrites = [
+            {
+              domain = cfg.services.gitea.hostName;
+              answer = cfg.network.hostIp;
+            }
+            {
+              domain = cfg.services.adguard.hostName;
+              answer = cfg.network.hostIp;
+            }
+            {
+              domain = cfg.services.jellyfin.hostName;
+              answer = cfg.network.hostIp;
+            }
+            # Add more as you deploy services
+          ];
+        };
+      };
+    };
+
+    # Git server.
+    gitea = {
+      enable = true;
+
+      database = {
+        type = "postgres";
+        host = "/run/postgresql"; # Unix socket
+        name = "gitea";
+        user = "gitea";
+        # No password needed - uses peer authentication via unix socket
+      };
+
+      settings = {
+        server = {
+          DOMAIN = cfg.services.gitea.hostName;
+          HTTP_ADDR = "0.0.0.0";
+          HTTP_PORT = cfg.services.gitea.httpPort;
+          ROOT_URL = "https://${cfg.services.gitea.hostName}:${toString cfg.services.gitea.httpPort}/";
+
+          PROTOCOL = "http";
+	  # HTTPS is disabled in favour of using caddy.
+          # CERT_FILE = config.sops.secrets.gitea-tls-cert.path;
+          # KEY_FILE = config.sops.secrets.gitea-tls-key.path;
+
+          START_SSH_SERVER = true;
+          BUILTIN_SSH_SERVER_USER = "gitea";
+          SSH_DOMAIN = cfg.services.gitea.hostName;
+          SSH_PORT = cfg.services.gitea.sshPort;
+        };
+
+        service = {
+          DISABLE_REGISTRATION = true; # Enable after creating admin
+        };
+      };
+    };
+
+    # Database.
+    postgresql = {
+      enable = true;
+      package = pkgs.postgresql_16;
+
+      # Listen on localhost only (services connect via unix socket or localhost)
+      enableTCPIP = false;
+
+      # Create databases and users for each service
+      ensureDatabases = [ "gitea" ];
+
+      ensureUsers = [
+        {
+          name = "gitea";
+          ensureDBOwnership = true;
+        }
+      ];
+    };
+
+    # Optional: manual backup with postgresqlBackup service
+    postgresqlBackup = {
+      enable = true;
+      databases = [ "gitea" ];
+      location = "${cfg.nas.mountPoint}/data/postgres-backup"; # Store on NAS.
+    };
+
+    restic.backups.local = {
+      user = "root"; # Default.
+      initialize = true;
+      paths = cfg.backup.paths;
+      repository = "${cfg.backup.mountPoint}/restic";
+      passwordFile = config.sops.secrets.restic-password.path;
+
+      # Run this daily at 3:00 AM (one hour after your cloud job).
+      timerConfig = {
+        OnCalendar = "03:00";
+        RandomizedDelaySec = "30min";
+        Persistent = true;
+      };
+
+      # Your custom retention policy: keep plenty of recent, fewer old.
+      pruneOpts = [
+        "--keep-daily 7"    # Last 7 days
+        "--keep-weekly 4"   # Last 4 weeks
+        "--keep-monthly 6"  # Last 6 months
+        "--keep-yearly 5"   # Last 2 years
+      ];
+    };
+
+    transmission = {
+      enable = true;
+      settings = {
+        download-dir = "${cfg.nas.mountPoint}/data/torrents";
+        incomplete-dir = "${cfg.nas.mountPoint}/data/torrents/.incomplete";
+        incomplete-dir-enabled = true;
+
+        # Network/Access settings.
+        # Bind to 0.0.0.0 so it listens to requests coming from the "Port Mapping"
+        rpc-bind-address = "0.0.0.0";
+        # Allow access from the LAN (192.168.*.*)
+        rpc-whitelist = "127.0.0.1,192.168.*.*";
+        rpc-whitelist-enabled = true;
+
+        # Permissions (Crucial!)
+        # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
+        umask = 2;
+
+        # Possibly this excludes from seeders.
+        # upload-limit = 0;
+        # upload-limit-enabled = true;
+        # ratio-limit = 0.1;
+        # ratio-limit-enabled = true;
+
+        peer-port-random-on-start = true;
+      };
+    };
+  };
+
+  # Enable the OpenSSH daemon.
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+      X11Forwarding = true;
+    };
+    extraConfig = ''
+      ClientAliveInterval 60
+      ClientAliveCountMax 120
+    '';
   };
 
   fileSystems.${cfg.nas.mountPoint} = {
@@ -248,69 +656,6 @@ in
     disable:
       - traefik
   '';
-
-  # DNS.
-  services.adguardhome = {
-    enable = true;
-
-    # Web interface and DNS ports
-    host = "0.0.0.0"; # Both local and LAN.
-    port = cfg.services.adguard.httpPort;
-
-    settings = {
-      users = [{
-        name = "admin";
-        # bcrypt hash of the password - see 1password.
-        # Generate new one with: htpasswd -B -n -b admin "my-password"
-        password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
-      }];
-
-      tls = {
-        enabled = true;
-        server_name = cfg.services.adguard.hostName;
-        force_https = true;
-        port_https = cfg.services.adguard.httpsPort;
-        port_dns_over_tls = cfg.services.adguard.dnsOverTLSPort;
-        certificate_path = config.sops.secrets.adguard-tls-cert.path;
-        private_key_path = config.sops.secrets.adguard-tls-key.path;
-      };
-
-
-      dns = {
-        bind_hosts = [ cfg.network.hostIp "127.0.0.1" ];
-        port = cfg.services.adguard.dnsPort;
-
-        # Upstream DNS servers (Cloudflare).
-        bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
-        upstream_dns = [ 
-	  "1.1.1.1" # Route through the gateway.
-	  "1.0.0.1" 
-	  # "1.1.1.1@${cfg.network.gateway}" # Route through the gateway.
-	  # "1.0.0.1@${cfg.network.gateway}" 
-	];
-
-	# Force upstream queries to bypass VPN by binding to LAN interface.
-	upstream_dns_file = "";
-
-        # Local domain rewrites for your services
-        rewrites = [
-          {
-            domain = cfg.services.gitea.hostName;
-            answer = cfg.network.hostIp;
-          }
-          {
-            domain = cfg.services.adguard.hostName;
-            answer = cfg.network.hostIp;
-          }
-          {
-            domain = cfg.services.jellyfin.hostName;
-            answer = cfg.network.hostIp;
-          }
-          # Add more as you deploy services
-        ];
-      };
-    };
-  };
 
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
@@ -353,11 +698,6 @@ in
     # use the example session manager (no others are packaged yet so this is enabled by default,
     # no need to redefine it in your config for now)
     #media-session.enable = true;
-  };
-
-  services.jellyfin = {
-    enable = true;
-    openFirewall = false; 
   };
 
   # Enable touchpad support (enabled default in most desktopManager).
@@ -416,6 +756,8 @@ in
   # Enable Fish shell.
   programs.fish.enable = true;
 
+  programs.ssh.startAgent = true;
+
   # Enable flakes for version control.
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
@@ -443,6 +785,7 @@ in
     sops
     vim
     wget
+    wireguard-tools
     xclip
   ];
 
@@ -536,147 +879,6 @@ in
     };
   };
 
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  programs = {
-    # mtr.enable = true;
-    # gnupg.agent = {
-    #   enable = true;
-    #   enableSSHSupport = true;
-    # };
-  };
-
-  programs.ssh.startAgent = true;
-
-  # List services that you want to enable:
-  services = {
-    gitea = {
-      enable = true;
-
-      database = {
-        type = "postgres";
-        host = "/run/postgresql"; # Unix socket
-        name = "gitea";
-        user = "gitea";
-        # No password needed - uses peer authentication via unix socket
-      };
-
-      settings = {
-        server = {
-          DOMAIN = cfg.services.gitea.hostName;
-          HTTP_ADDR = "0.0.0.0";
-          HTTP_PORT = cfg.services.gitea.httpPort;
-          ROOT_URL = "https://${cfg.services.gitea.hostName}:${toString cfg.services.gitea.httpPort}/";
-
-          # Enable HTTPS
-          PROTOCOL = "https";
-          CERT_FILE = config.sops.secrets.gitea-tls-cert.path;
-          KEY_FILE = config.sops.secrets.gitea-tls-key.path;
-
-          START_SSH_SERVER = true;
-          BUILTIN_SSH_SERVER_USER = "gitea";
-          SSH_DOMAIN = cfg.services.gitea.hostName;
-          SSH_PORT = cfg.services.gitea.sshPort;
-        };
-
-        service = {
-          DISABLE_REGISTRATION = true; # Enable after creating admin
-        };
-      };
-    };
-    postgresql = {
-      enable = true;
-      package = pkgs.postgresql_16;
-
-      # Listen on localhost only (services connect via unix socket or localhost)
-      enableTCPIP = false;
-
-      # Create databases and users for each service
-      ensureDatabases = [ "gitea" ];
-
-      ensureUsers = [
-        {
-          name = "gitea";
-          ensureDBOwnership = true;
-        }
-      ];
-    };
-
-    # Optional: manual backup with postgresqlBackup service
-    postgresqlBackup = {
-      enable = true;
-      databases = [ "gitea" ];
-      location = "/var/backup/postgresql";
-    };
-
-    restic.backups.local = {
-      user = "root"; # Default.
-      initialize = true;
-      paths = cfg.backup.paths;
-      repository = "${cfg.backup.mountPoint}/restic";
-      passwordFile = config.sops.secrets.restic-password.path;
-
-      # Run this daily at 3:00 AM (one hour after your cloud job).
-      timerConfig = {
-        OnCalendar = "03:00";
-        RandomizedDelaySec = "30min";
-        Persistent = true;
-      };
-
-      # Your custom retention policy: keep plenty of recent, fewer old.
-      pruneOpts = [
-        "--keep-daily 7"    # Last 7 days
-        "--keep-weekly 4"   # Last 4 weeks
-        "--keep-monthly 6"  # Last 6 months
-        "--keep-yearly 5"   # Last 2 years
-      ];
-    };
-
-    transmission = {
-      enable = true;
-      settings = {
-        download-dir = "/home/kasbuunk/Downloads/torrent";
-        # download-dir = "${cfg.nas.mountPoint}/data/torrents";
-        # incomplete-dir = "${cfg.nas.mountPoint}/data/torrents/.incomplete";
-        # incomplete-dir-enabled = true;
-
-        # Network/Access settings.
-        # Bind to 0.0.0.0 so it listens to requests coming from the "Port Mapping"
-        rpc-bind-address = "0.0.0.0";
-        # Allow access from the LAN (192.168.*.*)
-        rpc-whitelist = "127.0.0.1,192.168.*.*";
-        rpc-whitelist-enabled = true;
-
-        # Permissions (Crucial!)
-        # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
-        umask = 2;
-
-        # Possibly this excludes from seeders.
-        # upload-limit = 0;
-        # upload-limit-enabled = true;
-        # ratio-limit = 0.1;
-        # ratio-limit-enabled = true;
-
-        peer-port-random-on-start = true;
-      };
-    };
-  };
-
-  # Enable the OpenSSH daemon.
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";
-      X11Forwarding = true;
-    };
-    extraConfig = ''
-      ClientAliveInterval 60
-      ClientAliveCountMax 120
-    '';
-  };
-
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
@@ -690,6 +892,13 @@ in
     targets.suspend.enable = false;
     targets.hibernate.enable = false;
     targets.hybrid-sleep.enable = false;
+
+    tmpfiles.rules = [
+      "d ${cfg.services.loki.dataDir} 0700 loki loki -"
+      "d /var/lib/promtail 0700 promtail promtail -"
+      "d ${cfg.nas.mountPoint}/data/torrents 0775 transmission transmission -"
+      "d ${cfg.nas.mountPoint}/data/torrents/.incomplete 0775 transmission transmission -"
+    ];
 
     services.transmission.vpnConfinement = {
       enable = true;
