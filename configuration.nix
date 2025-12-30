@@ -785,6 +785,8 @@ in
     apacheHttpd
     e2fsprogs
     git
+    htop
+    iotop
     jq
     kubectl
     kubernetes-helm
@@ -796,6 +798,7 @@ in
     ripgrep
     rustup
     sops
+    sysstat
     vim
     wget
     wireguard-tools
