@@ -135,7 +135,6 @@ in
         cfg.services.adguard.dnsOverTLSPort
         cfg.services.jellyfin.httpPort
         cfg.services.immich.port
-	cfg.services.grafana.httpPort
 	cfg.services.caddy.httpPort
 	cfg.services.caddy.httpsPort
         cfg.nas.tcp1
@@ -220,21 +219,30 @@ in
 	"https://${cfg.services.gitea.hostName}" = {
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.gitea.httpPort}
+	    reverse_proxy localhost:${toString cfg.services.gitea.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
 	  '';
 	};
         # Jellyfin.
 	"https://${cfg.services.jellyfin.hostName}" = {
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.jellyfin.httpPort}
+	    reverse_proxy localhost:${toString cfg.services.jellyfin.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
 	  '';
 	};
         # AdGuard.
 	"https://${cfg.services.adguard.hostName}" = {
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.adguard.httpPort}
+	    reverse_proxy localhost:${toString cfg.services.adguard.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
 	  '';
 	};
         # Grafana.
