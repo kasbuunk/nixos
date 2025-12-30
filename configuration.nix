@@ -241,7 +241,10 @@ in
 	"https://${cfg.services.grafana.hostName}" = {
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort}
+	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
 	  '';
 	};
       };
@@ -426,6 +429,9 @@ in
         server = {
           http_addr = "0.0.0.0"; # Expose to LAN.
           http_port = cfg.services.grafana.httpPort;
+	  domain = cfg.services.grafana.hostName;
+	  root_url = "https://${cfg.services.grafana.hostName}/";
+	  serve_from_sub_path = true;
           # Force login.
           enforce_domain = true;
         };
@@ -438,6 +444,13 @@ in
 	"auth.anonymous" = {
 	  enabled = false; # No anonymous access.
 	};
+
+        analytics = {
+          reporting_enabled = false;
+          check_for_updates = false;
+          check_for_plugin_updates = false;
+          feedback_links_enabled = false;
+        };
       };
       
       provision = {
