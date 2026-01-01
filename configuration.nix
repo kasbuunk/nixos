@@ -139,8 +139,6 @@ in
         allowedTCPPorts = [
           cfg.services.caddy.httpPort # Reverse proxy for all services.
           cfg.services.caddy.httpsPort
-	  # cfg.services.adguard.httpPort
-	  cfg.services.adguard.httpsPort
           cfg.services.adguard.dnsPort # DNS.
           cfg.services.adguard.dnsOverTLSPort
           cfg.services.gitea.sshPort # Git SSH.
@@ -537,7 +535,7 @@ in
       enable = true;
 
       # Web interface and DNS ports
-      host = "0.0.0.0"; # Both local and LAN.
+      host = "0.0.0.0";
       port = cfg.services.adguard.httpPort;
 
       settings = {
