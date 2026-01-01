@@ -74,6 +74,10 @@ in
       ca-key = {
         owner = "caddy";
       };
+      transmission-credentials = {
+        owner = "transmission";
+        mode = "0400";
+      };
     };
   };
 
@@ -291,6 +295,17 @@ in
 	    reverse_proxy ${cfg.network.vpnNamespaceIp}:${toString cfg.services.transmission.httpPort} {
 	      header_up Host {host}
               header_up X-Real-IP {remote_host}
+              header_up X-Forwarded-For {remote_host}
+              header_up X-Forwarded-Proto {scheme}
+              
+              # Enable WebSocket support
+              header_up Connection {>Connection}
+              header_up Upgrade {>Upgrade}
+
+	      # Don't strip the path
+              transport http {
+                versions 1.1
+              }
 	    }
 	  '';
 	};
@@ -654,6 +669,8 @@ in
 
     transmission = {
       enable = true;
+      credentialsFile = config.sops.secrets.transmission-credentials.path;
+
       settings = {
         download-dir = "${cfg.nas.mountPoint}/data/torrents";
         incomplete-dir = "${cfg.nas.mountPoint}/data/torrents/.incomplete";
@@ -662,13 +679,18 @@ in
         # Network/Access settings.
         # Bind to 0.0.0.0 so it listens to requests coming from the "Port Mapping"
         rpc-bind-address = "0.0.0.0";
-        # Allow access from the LAN (192.168.*.*)
-        rpc-whitelist = "127.0.0.1,192.168.*.*";
-        rpc-whitelist-enabled = true;
+        # Allow access from the LAN and VPN.
+        rpc-whitelist-enabled = false;
 
         # Permissions (Crucial!)
         # umask 2 (decimal) results in 775/664 permissions, allowing group members to write.
         umask = 2;
+
+        # Enable authentication
+        rpc-authentication-required = true;
+
+        rpc-host-whitelist = "transmission.home,${cfg.services.transmission.hostName}";
+        rpc-host-whitelist-enabled = true;
 
         # Possibly this excludes from seeders.
         # upload-limit = 0;
