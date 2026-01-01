@@ -692,12 +692,6 @@ in
         rpc-host-whitelist = "transmission.home,${cfg.services.transmission.hostName}";
         rpc-host-whitelist-enabled = true;
 
-        # Possibly this excludes from seeders.
-        # upload-limit = 0;
-        # upload-limit-enabled = true;
-        # ratio-limit = 0.1;
-        # ratio-limit-enabled = true;
-
         peer-port-random-on-start = true;
       };
     };
