@@ -105,7 +105,7 @@ in
         connection = {
           id = "lan-connection";
           type = "ethernet";
-          interface-name = cfg.network.interface;
+          interface-name = cfg.network.lanInterface;
         };
         ipv4 = {
           method = "manual";
@@ -124,31 +124,53 @@ in
     # Open ports in the firewall.
     firewall = {
       enable = true;
-      allowedTCPPorts = [
-        cfg.services.ssh.port
-        # Expose internal services here.
-        cfg.services.gitea.httpPort
-        cfg.services.gitea.sshPort
-        cfg.services.adguard.httpPort
-        cfg.services.adguard.httpsPort
-        cfg.services.adguard.dnsPort
-        cfg.services.adguard.dnsOverTLSPort
-        cfg.services.jellyfin.httpPort
-        cfg.services.immich.httpPort
-	cfg.services.caddy.httpPort
-	cfg.services.caddy.httpsPort
-        cfg.nas.tcp1
-        cfg.nas.tcp2
-      ];
+
+      # Global ports (accessible from all interfaces).
       allowedUDPPorts = [
-        cfg.services.adguard.dnsPort
-        cfg.nas.udp1
-        cfg.nas.udp2
-	cfg.network.vpnPort
+        cfg.network.vpnPort # WireGuard server - must be accessible from internet.
       ];
+
+      # LAN-only access.
+      interfaces.${cfg.network.lanInterface} = {
+        allowedTCPPorts = [
+          cfg.services.caddy.httpPort # Reverse proxy for all services.
+          cfg.services.caddy.httpsPort
+	  # cfg.services.adguard.httpPort
+	  cfg.services.adguard.httpsPort
+          cfg.services.adguard.dnsPort # DNS.
+          cfg.services.adguard.dnsOverTLSPort
+          cfg.services.gitea.sshPort # Git SSH.
+          cfg.nas.tcp1 # Samba.
+          cfg.nas.tcp2
+        ];
+        allowedUDPPorts = [
+          cfg.services.adguard.dnsPort # DNS.
+          cfg.nas.udp1 # Samba.
+          cfg.nas.udp2
+        ];
+      };
+
+      # VPN-only access
+      interfaces.${cfg.network.vpnInterface} = {
+        allowedTCPPorts = [
+          cfg.services.ssh.port # SSH only via VPN.
+          cfg.services.caddy.httpPort # Access services via VPN.
+          cfg.services.caddy.httpsPort
+          cfg.services.adguard.dnsPort # DNS.
+          cfg.services.adguard.dnsOverTLSPort
+          cfg.services.gitea.sshPort # Git SSH.
+          cfg.nas.tcp1 # Samba.
+          cfg.nas.tcp2
+        ];
+        allowedUDPPorts = [
+          cfg.services.adguard.dnsPort # DNS
+          cfg.nas.udp1 # Samba
+          cfg.nas.udp2
+        ];
+      };
     };
 
-    wireguard.interfaces.wg0 = {
+    wireguard.interfaces.${cfg.network.vpnInterface} = {
       ips = [ "10.0.0.1/24" ];
       listenPort = cfg.network.vpnPort;
 
@@ -175,18 +197,11 @@ in
     wireguardConfigFile = config.sops.secrets.wireguard-config.path;
     accessibleFrom = [ 
       "192.168.1.0/24" # LAN.
-      "127.0.0.1/32" # Localhost.
-      "${cfg.network.hostIp}/32" # The host ip itself.
+      "10.0.0.0/24"
     ]; # LAN can access services.
     portMappings = [{
       from = cfg.services.transmission.httpPort;
       to = cfg.services.transmission.httpPort; # Transmission web UI.
-    }];
-
-    # Allow port forwarding from this network interface.
-    openVPNPorts = [{ 
-     port = cfg.services.transmission.httpPort;
-     protocol = "tcp";
     }];
   };
 
@@ -273,7 +288,7 @@ in
 	"https://${cfg.services.transmission.hostName}" = {
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy ${cfg.network.hostIp}:${toString cfg.services.transmission.httpPort} {
+	    reverse_proxy ${cfg.network.vpnNamespaceIp}:${toString cfg.services.transmission.httpPort} {
 	      header_up Host {host}
               header_up X-Real-IP {remote_host}
 	    }
