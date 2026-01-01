@@ -134,7 +134,7 @@ in
         cfg.services.adguard.dnsPort
         cfg.services.adguard.dnsOverTLSPort
         cfg.services.jellyfin.httpPort
-        cfg.services.immich.port
+        cfg.services.immich.httpPort
 	cfg.services.caddy.httpPort
 	cfg.services.caddy.httpsPort
         cfg.nas.tcp1
@@ -176,15 +176,16 @@ in
     accessibleFrom = [ 
       "192.168.1.0/24" # LAN.
       "127.0.0.1/32" # Localhost.
+      "${cfg.network.hostIp}/32" # The host ip itself.
     ]; # LAN can access services.
     portMappings = [{
-      from = 9091;
-      to = 9091; # Transmission web UI.
+      from = cfg.services.transmission.httpPort;
+      to = cfg.services.transmission.httpPort; # Transmission web UI.
     }];
 
     # Allow port forwarding from this network interface.
     openVPNPorts = [{ 
-     port = 9091;
+     port = cfg.services.transmission.httpPort;
      protocol = "tcp";
     }];
   };
@@ -214,6 +215,9 @@ in
   services = {
     caddy = {
       enable = true;
+      globalConfig = ''
+        auto_https off
+      '';
       virtualHosts = {
         # Gitea.
 	"https://${cfg.services.gitea.hostName}" = {
@@ -235,6 +239,16 @@ in
 	    }
 	  '';
 	};
+        # Immich.
+	"https://${cfg.services.immich.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy localhost:${toString cfg.services.immich.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
+	  '';
+	};
         # AdGuard.
 	"https://${cfg.services.adguard.hostName}" = {
 	  extraConfig = ''
@@ -250,6 +264,16 @@ in
 	  extraConfig = ''
 	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
 	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort} {
+	      header_up Host {host}
+              header_up X-Real-IP {remote_host}
+	    }
+	  '';
+	};
+        # Transmission.
+	"https://${cfg.services.transmission.hostName}" = {
+	  extraConfig = ''
+	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+	    reverse_proxy ${cfg.network.hostIp}:${toString cfg.services.transmission.httpPort} {
 	      header_up Host {host}
               header_up X-Real-IP {remote_host}
 	    }
@@ -309,7 +333,7 @@ in
     # Home photos and videos.
     immich = {
       enable = true;
-      port = cfg.services.immich.port;
+      port = cfg.services.immich.httpPort;
       # Use your NAS as the storage location
       mediaLocation = cfg.services.immich.mediaLocation;
       host = "0.0.0.0";
@@ -687,7 +711,7 @@ in
     variant = "";
   };
 
-  # Configure console keymap
+  # Configure console keymap.
   console.keyMap = "us";
 
   # Enable CUPS to print documents.
@@ -924,9 +948,17 @@ in
       "d ${cfg.nas.mountPoint}/data/torrents/.incomplete 0775 transmission transmission -"
     ];
 
-    services.transmission.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "wg";
+    services.transmission = {
+      vpnConfinement = {
+        enable = true;
+        vpnNamespace = "wg";
+      };
+
+      serviceConfig = {
+        BindPaths = [
+          "/mnt/nas/data/torrents"
+        ];
+      };
     };
 
     services.nixos-autoupdate = {

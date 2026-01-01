@@ -29,7 +29,8 @@
       httpPort = 8096;
     };
     immich = {
-      port = 2283;
+      hostName = "photos.home";
+      httpPort = 2283;
       mediaLocation = "/mnt/nas/data/photos";
     };
     ssh = {
@@ -40,8 +41,12 @@
       httpPort = 3100;
     };
     grafana = {
-      httpPort = 3000;
       hostName = "grafana.home";
+      httpPort = 3000;
+    };
+    transmission = {
+      hostName = "transmission.home";
+      httpPort = 9091;
     };
   };
 
