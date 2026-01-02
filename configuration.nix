@@ -636,7 +636,7 @@ in
       enableTCPIP = false;
 
       # Create databases and users for each service
-      ensureDatabases = [ "gitea" "hass" ];
+      ensureDatabases = [ "gitea" "hass" "immich" ];
 
       ensureUsers = [
         {
@@ -647,13 +647,17 @@ in
           name = "hass";
           ensureDBOwnership = true;
         }
+        {
+          name = "immich";
+          ensureDBOwnership = true;
+        }
       ];
     };
 
     # Optional: manual backup with postgresqlBackup service
     postgresqlBackup = {
       enable = true;
-      databases = [ "gitea" "hass" ];
+      databases = [ "gitea" "hass" "immich" ];
       location = "${cfg.nas.mountPoint}/data/postgres-backup"; # Store on NAS.
     };
 
