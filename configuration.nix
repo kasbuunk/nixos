@@ -135,7 +135,7 @@ in
         allowedTCPPorts = [
           cfg.services.caddy.httpPort # Reverse proxy for all services.
           cfg.services.caddy.httpsPort
-          cfg.services.jellyfin.httpPort # For Apple TV local access.
+          cfg.services.jellyfin.httpPort # Access over LAN for AppleTV.
           cfg.services.adguard.dnsPort # DNS.
           cfg.services.adguard.dnsOverTLSPort
           cfg.services.gitea.sshPort # Git SSH.
@@ -303,6 +303,20 @@ in
               }
 	    }
 	  '';
+	};
+        # Home Assistant.
+	"https://${cfg.services.homeassistant.hostName}" = {
+          extraConfig = ''
+            tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+
+	    @websocket {
+              header Connection *Upgrade*
+              header Upgrade websocket
+            }
+
+            reverse_proxy @websocket localhost:${toString cfg.services.homeassistant.httpPort}
+            reverse_proxy localhost:${toString cfg.services.homeassistant.httpPort}
+          '';
 	};
       };
     };
@@ -622,11 +636,15 @@ in
       enableTCPIP = false;
 
       # Create databases and users for each service
-      ensureDatabases = [ "gitea" ];
+      ensureDatabases = [ "gitea" "hass" ];
 
       ensureUsers = [
         {
           name = "gitea";
+          ensureDBOwnership = true;
+        }
+        {
+          name = "hass";
           ensureDBOwnership = true;
         }
       ];
@@ -635,7 +653,7 @@ in
     # Optional: manual backup with postgresqlBackup service
     postgresqlBackup = {
       enable = true;
-      databases = [ "gitea" ];
+      databases = [ "gitea" "hass" ];
       location = "${cfg.nas.mountPoint}/data/postgres-backup"; # Store on NAS.
     };
 
@@ -690,6 +708,51 @@ in
         peer-port-random-on-start = true;
       };
     };
+
+    home-assistant = {
+      enable = true;
+      
+      configDir = cfg.services.homeassistant.configDir;
+      
+      extraPackages = ps: with ps; [
+        psycopg2
+      ];
+      
+      config = {
+        homeassistant = {
+          name = "Home";
+          unit_system = "metric";
+          time_zone = "Europe/Amsterdam";
+          # Secrets handled in secrets.yaml within configDir
+        };
+        
+        recorder = {
+          db_url = "postgresql://@/hass";
+          auto_purge = false;  # Keep all data for analysis
+          auto_repack = true;   # Still optimize database
+        };
+        
+        http = {
+          server_port = cfg.services.homeassistant.httpPort;
+          use_x_forwarded_for = true;
+          trusted_proxies = [ "127.0.0.1" "::1" ];
+        };
+      };
+      
+      extraComponents = [
+        "default_config"
+        "met"
+        "esphome"
+        "opentherm_gw"
+        "zha"  # Zigbee Home Automation for your Bosch thermostats
+      ];
+    };
+
+
+    udev.extraRules = ''
+      # SONOFF Zigbee Dongle Plus (TI CC2652P)
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="zigbee", MODE="0660", GROUP="dialout"
+    '';
   };
 
   # Enable the OpenSSH daemon.
@@ -817,6 +880,15 @@ in
 
   # Permission glue to let me and jellyfin access the transmission group.
   users.groups.transmission.members = [ "kasbuunk" "jellyfin" ];
+
+  users.users.hass = {
+    isSystemUser = true;
+    group = "hass";
+    home = cfg.services.homeassistant.configDir;
+    createHome = true;
+    extraGroups = [ "dialout" ];  # For Zigbee USB access.
+  };
+  users.groups.hass = { };
 
   # Keep SSH available.
   powerManagement.enable = false;
@@ -972,6 +1044,7 @@ in
       "d /var/lib/promtail 0700 promtail promtail -"
       "d ${cfg.nas.mountPoint}/data/torrents 0775 transmission transmission -"
       "d ${cfg.nas.mountPoint}/data/torrents/.incomplete 0775 transmission transmission -"
+      "d ${cfg.services.homeassistant.configDir} 0755 hass hass -"
     ];
 
     services.transmission = {

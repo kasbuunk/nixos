@@ -50,6 +50,11 @@
       hostName = "transmission.home";
       httpPort = 9091;
     };
+    homeassistant = {
+      hostName = "home.home";
+      httpPort = 8123;
+      configDir = "/mnt/nas/data/config/home-assistant";
+    };
   };
 
   nas = {
