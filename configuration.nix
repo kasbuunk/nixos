@@ -153,7 +153,7 @@ in
       };
 
       # VPN-only access
-      interfaces.${cfg.network.vpnInterface} = {
+      interfaces.${cfg.network.vpnServerInterface} = {
         allowedTCPPorts = [
           cfg.services.ssh.port # SSH only via VPN.
           cfg.services.caddy.httpPort # Access services via VPN.
@@ -172,7 +172,7 @@ in
       };
     };
 
-    wireguard.interfaces.${cfg.network.vpnInterface} = {
+    wireguard.interfaces.${cfg.network.vpnServerInterface} = {
       ips = [ "10.0.0.1/24" ];
       listenPort = cfg.network.vpnPort;
 

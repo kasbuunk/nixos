@@ -1,11 +1,11 @@
 {
   network = {
     hostIp = "192.168.1.76";
-    vpnNamespaceIp = "192.168.15.1";
-    vpnInterface = "wg0";
     gateway = "192.168.1.1";
     dns = "1.1.1.1";
     lanInterface = "wlp11s0f3u4";
+    vpnServerInterface = "wgserver";
+    vpnNamespaceIp = "192.168.15.1";
     vpnPort = 51820;
   };
 
