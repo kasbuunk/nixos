@@ -228,6 +228,66 @@ From macOS
 
 3. Connect as a Registered User using your Linux username and the Samba password created above.
 
+## Home Assistant
+
+Home automation for heating control via OpenTherm Gateway and Zigbee smart radiator thermostats.
+
+**Access:** `https://home.home`
+
+### Hardware
+
+- **SONOFF Zigbee 3.0 USB Dongle Plus** - Zigbee coordinator
+- **OpenTherm Gateway WiFi** - Connects to Nefit combi boiler
+- **Bosch Smart Home Radiator Thermostat II** (8x) - Smart TRVs
+
+### Setup
+
+#### 1. Plug in Zigbee Dongle
+
+Connect the SONOFF dongle to USB. Verify `/dev/zigbee` symlink exists:
+```bash
+ls -la /dev/zigbee
+```
+
+#### 2. Onboarding
+
+1. Navigate to `https://home.home`
+2. Create admin account through the wizard
+3. If "Something went wrong" popup appears, hard refresh (Ctrl+Shift+R)
+
+#### 3. Add Zigbee Integration
+
+1. **Settings** → **Devices & Services** → **Add Integration**
+2. Search "Zigbee Home Automation" (ZHA)
+3. Device path: `/dev/zigbee`
+4. Select "SONOFF Zigbee 3.0 USB Dongle Plus"
+
+#### 4. Pair Radiator Thermostats
+
+For each thermostat:
+1. **Settings** → **Devices & Services** → **Zigbee Home Automation** → **Add Device**
+2. Remove battery cover, press and hold pairing button for 3-5 seconds
+3. Device appears within 30 seconds
+4. Rename based on room location
+
+#### 5. Configure OpenTherm Gateway
+
+**Physical Installation:**
+1. Connect gateway to boiler's OpenTherm port
+2. Power via USB-A supply
+3. Gateway creates WiFi access point initially
+
+**WiFi Setup:**
+1. Connect to gateway's WiFi network
+2. Configure to join home network
+3. Note assigned IP address
+
+**Home Assistant Integration:**
+1. **Settings** → **Devices & Services** → **Add Integration**
+2. Search "OpenTherm Gateway"
+3. Enter gateway IP (or `otgw.local`)
+4. Port: `8080`
+
 ## In progress
 
 Currently I am having trouble setting up the ssh configuration such that I can use 1password from both the nixos server itself and my private device. The issue is that when I am pointing the ssh config to the 1password agent socket, that means it overrides when I connect from a remote device, even with ssh forwarding enabled. So for the time being I set the identity agent with the environment variable `SSH_AUTH_SOCK`, but this only works remotely. I also just created an ssh key for gitea especially so it can use that to authenticate, which works from all devices. But then from the nixos server itself I can't use any ssh keys from 1password. Do I need 1password at all on that machine (programmatically, using the agent socket)?
