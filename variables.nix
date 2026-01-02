@@ -42,6 +42,11 @@
       dataDir = "/mnt/nas/data/log";
       httpPort = 3100;
     };
+    mimir = {
+      dataDir = "/var/lib/mimir/data";
+      httpPort = 9009;
+      grpcPort = 9096;
+    };
     grafana = {
       hostName = "grafana.home";
       httpPort = 3000;
@@ -54,6 +59,10 @@
       hostName = "home.home";
       httpPort = 8123;
       configDir = "/mnt/nas/data/config/home-assistant";
+    };
+    crowdsec = {
+      httpPort = 8080;
+      metricsPort = 6060;
     };
   };
 

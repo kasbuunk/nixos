@@ -288,6 +288,41 @@ For each thermostat:
 3. Enter gateway IP (or `otgw.local`)
 4. Port: `8080`
 
+## CrowdSec
+
+After applying your configuration.nix changes, the following manual steps are required to finalize the CrowdSec-WireGuard pipeline:
+1. Enable WireGuard Debug Logs
+
+By default, WireGuard is silent. You must manually enable kernel dynamic debugging so that handshake failures are sent to the system journal for CrowdSec to read.
+Bash
+
+### Enable logging for the wireguard module
+echo "module wireguard +p" | sudo tee /sys/kernel/debug/dynamic_debug/control
+
+Note: This kernel setting does not persist across reboots.
+2. Register the Security Engine (LAPI)
+
+If this is a fresh install or the credentials file is missing, you must generate the local API credentials.
+Bash
+
+### Register the local engine and save credentials to the path defined in your Nix config
+sudo cscli machines add local-engine --auto --file /var/lib/crowdsec/local_api_credentials.yaml
+
+### Set correct ownership
+sudo chown crowdsec:crowdsec /var/lib/crowdsec/local_api_credentials.yaml
+sudo chmod 600 /var/lib/crowdsec/local_api_credentials.yaml
+
+3. Install WireGuard Detection Rules
+
+Download the specific parsers and scenarios required to identify VPN brute-force attempts.
+Bash
+
+## # Install the WireGuard collection
+sudo cscli collections install crowdsecurity/wireguard
+
+## # Restart the service to apply changes
+sudo systemctl restart crowdsec
+
 ## In progress
 
 Currently I am having trouble setting up the ssh configuration such that I can use 1password from both the nixos server itself and my private device. The issue is that when I am pointing the ssh config to the 1password agent socket, that means it overrides when I connect from a remote device, even with ssh forwarding enabled. So for the time being I set the identity agent with the environment variable `SSH_AUTH_SOCK`, but this only works remotely. I also just created an ssh key for gitea especially so it can use that to authenticate, which works from all devices. But then from the nixos server itself I can't use any ssh keys from 1password. Do I need 1password at all on that machine (programmatically, using the agent socket)?
