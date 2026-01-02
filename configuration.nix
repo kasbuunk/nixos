@@ -1,7 +1,3 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
 { config, pkgs, ... }:
 
 let
@@ -139,6 +135,7 @@ in
         allowedTCPPorts = [
           cfg.services.caddy.httpPort # Reverse proxy for all services.
           cfg.services.caddy.httpsPort
+          cfg.services.jellyfin.httpPort # For Apple TV local access.
           cfg.services.adguard.dnsPort # DNS.
           cfg.services.adguard.dnsOverTLSPort
           cfg.services.gitea.sshPort # Git SSH.
