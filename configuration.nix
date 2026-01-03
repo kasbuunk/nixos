@@ -87,7 +87,8 @@ in
     "/boot/crypto_keyfile.bin" = null;
   };
 
-  boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile = "/boot/crypto_keyfile.bin";
+  boot.initrd.luks.devices."luks-bb4c75e7-5ece-4105-9647-6494eb386af4".keyFile =
+    "/boot/crypto_keyfile.bin";
 
   boot.loader.grub.enableCryptodisk = true;
 
@@ -96,7 +97,7 @@ in
 
     # Enables wireless support via wpa_supplicant.
     # This is mutually exlusive from the networkmanager below (I think).
-    # wireless.enable = true;  
+    # wireless.enable = true;
 
     # Enable networking
     networkmanager.enable = true;
@@ -177,15 +178,15 @@ in
 
       peers = [
         {
-	  name = "phone";
-	  publicKey = "LP8gDDyNvldcc/lVkuP8pjEMGTx4DRGeG8FHujrJ8Dw=";
-	  allowedIPs = [ "10.0.0.2/32" ];
-	}
+          name = "phone";
+          publicKey = "LP8gDDyNvldcc/lVkuP8pjEMGTx4DRGeG8FHujrJ8Dw=";
+          allowedIPs = [ "10.0.0.2/32" ];
+        }
         {
-	  name = "laptop";
-	  publicKey = "mMIzeWJbhUKCAybziDFueRJ/i9qPQYzW/UZORdX2zzc=";
-	  allowedIPs = [ "10.0.0.3/32" ];
-	}
+          name = "laptop";
+          publicKey = "mMIzeWJbhUKCAybziDFueRJ/i9qPQYzW/UZORdX2zzc=";
+          allowedIPs = [ "10.0.0.3/32" ];
+        }
       ];
     };
   };
@@ -194,14 +195,16 @@ in
   vpnNamespaces.wg = {
     enable = true;
     wireguardConfigFile = config.sops.secrets.wireguard-config.path;
-    accessibleFrom = [ 
+    accessibleFrom = [
       "192.168.1.0/24" # LAN.
       "10.0.0.0/24"
     ]; # LAN can access services.
-    portMappings = [{
-      from = cfg.services.transmission.httpPort;
-      to = cfg.services.transmission.httpPort; # Transmission web UI.
-    }];
+    portMappings = [
+      {
+        from = cfg.services.transmission.httpPort;
+        to = cfg.services.transmission.httpPort; # Transmission web UI.
+      }
+    ];
   };
 
   # Set your time zone.
@@ -234,90 +237,90 @@ in
       '';
       virtualHosts = {
         # Gitea.
-	"https://${cfg.services.gitea.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.gitea.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-	    }
-	  '';
-	};
-        # Jellyfin.
-	"https://${cfg.services.jellyfin.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.jellyfin.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-	    }
-	  '';
-	};
-        # Immich.
-	"https://${cfg.services.immich.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.immich.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-	    }
-	  '';
-	};
-        # AdGuard.
-	"https://${cfg.services.adguard.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.adguard.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-	    }
-	  '';
-	};
-        # Grafana.
-	"https://${cfg.services.grafana.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-	    }
-	  '';
-	};
-        # Transmission.
-	"https://${cfg.services.transmission.hostName}" = {
-	  extraConfig = ''
-	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
-	    reverse_proxy ${cfg.network.vpnNamespaceIp}:${toString cfg.services.transmission.httpPort} {
-	      header_up Host {host}
-              header_up X-Real-IP {remote_host}
-              header_up X-Forwarded-For {remote_host}
-              header_up X-Forwarded-Proto {scheme}
-              
-              # Enable WebSocket support
-              header_up Connection {>Connection}
-              header_up Upgrade {>Upgrade}
-
-	      # Don't strip the path
-              transport http {
-                versions 1.1
-              }
-	    }
-	  '';
-	};
-        # Home Assistant.
-	"https://${cfg.services.homeassistant.hostName}" = {
+        "https://${cfg.services.gitea.hostName}" = {
           extraConfig = ''
-            tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy localhost:${toString cfg.services.gitea.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+            	    }
+            	  '';
+        };
+        # Jellyfin.
+        "https://${cfg.services.jellyfin.hostName}" = {
+          extraConfig = ''
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy localhost:${toString cfg.services.jellyfin.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+            	    }
+            	  '';
+        };
+        # Immich.
+        "https://${cfg.services.immich.hostName}" = {
+          extraConfig = ''
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy localhost:${toString cfg.services.immich.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+            	    }
+            	  '';
+        };
+        # AdGuard.
+        "https://${cfg.services.adguard.hostName}" = {
+          extraConfig = ''
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy localhost:${toString cfg.services.adguard.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+            	    }
+            	  '';
+        };
+        # Grafana.
+        "https://${cfg.services.grafana.hostName}" = {
+          extraConfig = ''
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy localhost:${toString cfg.services.grafana.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+            	    }
+            	  '';
+        };
+        # Transmission.
+        "https://${cfg.services.transmission.hostName}" = {
+          extraConfig = ''
+            	    tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
+            	    reverse_proxy ${cfg.network.vpnNamespaceIp}:${toString cfg.services.transmission.httpPort} {
+            	      header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+                          header_up X-Forwarded-For {remote_host}
+                          header_up X-Forwarded-Proto {scheme}
+                          
+                          # Enable WebSocket support
+                          header_up Connection {>Connection}
+                          header_up Upgrade {>Upgrade}
 
-	    @websocket {
-              header Connection *Upgrade*
-              header Upgrade websocket
-            }
+            	      # Don't strip the path
+                          transport http {
+                            versions 1.1
+                          }
+            	    }
+            	  '';
+        };
+        # Home Assistant.
+        "https://${cfg.services.homeassistant.hostName}" = {
+          extraConfig = ''
+                        tls ${config.sops.secrets."ca-cert".path} ${config.sops.secrets."ca-key".path}
 
-            reverse_proxy @websocket localhost:${toString cfg.services.homeassistant.httpPort}
-            reverse_proxy localhost:${toString cfg.services.homeassistant.httpPort}
+            	    @websocket {
+                          header Connection *Upgrade*
+                          header Upgrade websocket
+                        }
+
+                        reverse_proxy @websocket localhost:${toString cfg.services.homeassistant.httpPort}
+                        reverse_proxy localhost:${toString cfg.services.homeassistant.httpPort}
           '';
-	};
+        };
       };
     };
 
@@ -385,10 +388,10 @@ in
       configuration = {
         auth_enabled = false; # Secure access via Grafana.
         server = {
-	  http_listen_address = "127.0.0.1";
-	  http_listen_port = cfg.services.loki.httpPort;
-	  grpc_listen_address = "127.0.0.1";
-	};
+          http_listen_address = "127.0.0.1";
+          http_listen_port = cfg.services.loki.httpPort;
+          grpc_listen_address = "127.0.0.1";
+        };
 
         common = {
           instance_addr = "127.0.0.1";
@@ -401,31 +404,33 @@ in
           ring.kvstore.store = "inmemory";
         };
 
-        schema_config.configs = [{
-          from = "2024-01-01";
-          store = "tsdb";  # Modern storage backend
-          object_store = "filesystem";
-          schema = "v13";
-          index = {
-            prefix = "index_";
-            period = "24h";
-          };
-        }];
+        schema_config.configs = [
+          {
+            from = "2024-01-01";
+            store = "tsdb"; # Modern storage backend
+            object_store = "filesystem";
+            schema = "v13";
+            index = {
+              prefix = "index_";
+              period = "24h";
+            };
+          }
+        ];
 
         storage_config = {
-	  filesystem.directory = "${cfg.services.loki.dataDir}/chunks";
-	  tsdb_shipper = {
-	    active_index_directory = "${cfg.services.loki.dataDir}/index";
-	    cache_location = "${cfg.services.loki.dataDir}/index_cache";
-	  };
+          filesystem.directory = "${cfg.services.loki.dataDir}/chunks";
+          tsdb_shipper = {
+            active_index_directory = "${cfg.services.loki.dataDir}/index";
+            cache_location = "${cfg.services.loki.dataDir}/index_cache";
+          };
         };
 
         compactor = {
           working_directory = "${cfg.services.loki.dataDir}/compactor";
           retention_enabled = true;
           retention_delete_delay = "2h";
-	  compaction_interval = "10m";
-	  delete_request_store = "filesystem";
+          compaction_interval = "10m";
+          delete_request_store = "filesystem";
         };
 
         limits_config = {
@@ -434,7 +439,7 @@ in
           reject_old_samples_max_age = "168h";
 
           max_streams_per_user = 10000;
-	  max_global_streams_per_user = 10000;
+          max_global_streams_per_user = 10000;
         };
       };
     };
@@ -450,12 +455,14 @@ in
 
         positions.filename = "/var/lib/promtail/positions.yaml";
 
-        clients = [{
-          url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}/loki/api/v1/push";
-        }];
+        clients = [
+          {
+            url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}/loki/api/v1/push";
+          }
+        ];
 
         scrape_configs = [
-	  {
+          {
             job_name = "journal";
             journal = {
               max_age = "12h";
@@ -464,11 +471,11 @@ in
                 host = config.networking.hostName;
               };
             };
-	    pipeline_stages = [
+            pipeline_stages = [
               # Drop noisy units entirely
               {
                 match = {
-	          selector = "{unit=~\"session-.*\\\\.scope\"}";
+                  selector = "{unit=~\"session-.*\\\\.scope\"}";
                   action = "drop";
                 };
               }
@@ -486,26 +493,28 @@ in
             ];
             relabel_configs = [
               {
-                source_labels = ["__journal__systemd_unit"];
+                source_labels = [ "__journal__systemd_unit" ];
                 target_label = "unit";
               }
             ];
           }
-	  {
-	    job_name = "crowdsec";
-	    static_configs = [{
-	      targets = [ "localhost" ];
-	      labels = {
-	        job = "crowdsec";
-		host = config.networking.hostName;
-		__path__ = "/var/log/crowdsec.log"; # Crowdsec logs here.
-	      };
-	    }];
-	  }
-	];
+          {
+            job_name = "crowdsec";
+            static_configs = [
+              {
+                targets = [ "localhost" ];
+                labels = {
+                  job = "crowdsec";
+                  host = config.networking.hostName;
+                  __path__ = "/var/log/crowdsec.log"; # Crowdsec logs here.
+                };
+              }
+            ];
+          }
+        ];
       };
     };
-  
+
     # Grafana - visualization.
     grafana = {
       enable = true;
@@ -513,21 +522,21 @@ in
         server = {
           http_addr = "0.0.0.0"; # Expose to LAN.
           http_port = cfg.services.grafana.httpPort;
-	  domain = cfg.services.grafana.hostName;
-	  root_url = "https://${cfg.services.grafana.hostName}/";
-	  serve_from_sub_path = true;
+          domain = cfg.services.grafana.hostName;
+          root_url = "https://${cfg.services.grafana.hostName}/";
+          serve_from_sub_path = true;
           # Force login.
           enforce_domain = true;
         };
 
-	security = {
-	  admin_user = "admin";
-	  admin_password = "$__file{${config.sops.secrets.grafana-admin-password.path}}";
-	  secret_key = "$__file{${config.sops.secrets.grafana-secret-key.path}}";
-	};
-	"auth.anonymous" = {
-	  enabled = false; # No anonymous access.
-	};
+        security = {
+          admin_user = "admin";
+          admin_password = "$__file{${config.sops.secrets.grafana-admin-password.path}}";
+          secret_key = "$__file{${config.sops.secrets.grafana-secret-key.path}}";
+        };
+        "auth.anonymous" = {
+          enabled = false; # No anonymous access.
+        };
 
         analytics = {
           reporting_enabled = false;
@@ -536,22 +545,24 @@ in
           feedback_links_enabled = false;
         };
       };
-      
+
       provision = {
         enable = true;
-        datasources.settings.datasources = [{
-          name = "Loki";
-          type = "loki";
-          access = "proxy";
-          url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}";
-          isDefault = true;
-        }];
+        datasources.settings.datasources = [
+          {
+            name = "Loki";
+            type = "loki";
+            access = "proxy";
+            url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}";
+            isDefault = true;
+          }
+        ];
       };
     };
 
     jellyfin = {
       enable = true;
-      openFirewall = false; 
+      openFirewall = false;
     };
 
     # DNS.
@@ -563,22 +574,30 @@ in
       port = cfg.services.adguard.httpPort;
 
       settings = {
-        users = [{
-          name = "admin";
-          # bcrypt hash of the password - see 1password.
-          # Generate new one with: htpasswd -B -n -b admin "my-password"
-          password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
-        }];
+        users = [
+          {
+            name = "admin";
+            # bcrypt hash of the password - see 1password.
+            # Generate new one with: htpasswd -B -n -b admin "my-password"
+            password = "$2y$10$cLohIuXo0QgJp//b9PaEP.DBqGaMCwJIbLPN54ekPnljFz9FYYKoC";
+          }
+        ];
 
         dns = {
-          bind_hosts = [ cfg.network.hostIp "127.0.0.1" ];
+          bind_hosts = [
+            cfg.network.hostIp
+            "127.0.0.1"
+          ];
           port = cfg.services.adguard.dnsPort;
 
           # Upstream DNS servers (Cloudflare).
-          bootstrap_dns = [ "1.1.1.1" "1.0.0.1" ];
-          upstream_dns = [ 
+          bootstrap_dns = [
+            "1.1.1.1"
+            "1.0.0.1"
+          ];
+          upstream_dns = [
             "1.1.1.1" # Route through the gateway.
-            "1.0.0.1" 
+            "1.0.0.1"
           ];
 
           # Force upstream queries to bypass VPN by binding to LAN interface.
@@ -624,7 +643,7 @@ in
           ROOT_URL = "https://${cfg.services.gitea.hostName}:${toString cfg.services.gitea.httpPort}/";
 
           PROTOCOL = "http";
-	  # HTTPS is disabled in favour of using caddy.
+          # HTTPS is disabled in favour of using caddy.
           # CERT_FILE = config.sops.secrets.gitea-tls-cert.path;
           # KEY_FILE = config.sops.secrets.gitea-tls-key.path;
 
@@ -649,7 +668,11 @@ in
       enableTCPIP = false;
 
       # Create databases and users for each service
-      ensureDatabases = [ "gitea" "hass" "immich" ];
+      ensureDatabases = [
+        "gitea"
+        "hass"
+        "immich"
+      ];
 
       ensureUsers = [
         {
@@ -670,7 +693,11 @@ in
     # Optional: manual backup with postgresqlBackup service
     postgresqlBackup = {
       enable = true;
-      databases = [ "gitea" "hass" "immich" ];
+      databases = [
+        "gitea"
+        "hass"
+        "immich"
+      ];
       location = "${cfg.nas.mountPoint}/data/postgres-backup"; # Store on NAS.
     };
 
@@ -690,10 +717,10 @@ in
 
       # Your custom retention policy: keep plenty of recent, fewer old.
       pruneOpts = [
-        "--keep-daily 7"    # Last 7 days
-        "--keep-weekly 4"   # Last 4 weeks
-        "--keep-monthly 6"  # Last 6 months
-        "--keep-yearly 5"   # Last 2 years
+        "--keep-daily 7" # Last 7 days
+        "--keep-weekly 4" # Last 4 weeks
+        "--keep-monthly 6" # Last 6 months
+        "--keep-yearly 5" # Last 2 years
       ];
     };
 
@@ -728,13 +755,14 @@ in
 
     home-assistant = {
       enable = true;
-      
+
       configDir = cfg.services.homeassistant.configDir;
-      
-      extraPackages = ps: with ps; [
-        psycopg2
-      ];
-      
+
+      extraPackages =
+        ps: with ps; [
+          psycopg2
+        ];
+
       config = {
         homeassistant = {
           name = "Home";
@@ -742,26 +770,29 @@ in
           time_zone = "Europe/Amsterdam";
           # Secrets handled in secrets.yaml within configDir
         };
-        
+
         recorder = {
           db_url = "postgresql://@/hass";
-          auto_purge = false;  # Keep all data for analysis
-          auto_repack = true;   # Still optimize database
+          auto_purge = false; # Keep all data for analysis
+          auto_repack = true; # Still optimize database
         };
-        
+
         http = {
           server_port = cfg.services.homeassistant.httpPort;
           use_x_forwarded_for = true;
-          trusted_proxies = [ "127.0.0.1" "::1" ];
+          trusted_proxies = [
+            "127.0.0.1"
+            "::1"
+          ];
         };
       };
-      
+
       extraComponents = [
         "default_config"
         "met"
         "esphome"
         "opentherm_gw"
-        "zha"  # Zigbee Home Automation for your Bosch thermostats
+        "zha" # Zigbee Home Automation for your Bosch thermostats
       ];
     };
 
@@ -777,14 +808,14 @@ in
       settings.lapi.credentialsFile = "/var/lib/crowdsec/local_api_credentials.yaml";
       settings.general = {
         api.server = {
-	  enable = true;
-	  listen_uri = "127.0.0.1:${toString cfg.services.crowdsec.httpPort}";
-	};
+          enable = true;
+          listen_uri = "127.0.0.1:${toString cfg.services.crowdsec.httpPort}";
+        };
 
-	api.client.credentials_path = "/var/lib/crowdsec/local_api_credentials.yaml";
-	# Tell CrowdSec where to store/read its LAPI credentials.
+        api.client.credentials_path = "/var/lib/crowdsec/local_api_credentials.yaml";
+        # Tell CrowdSec where to store/read its LAPI credentials.
         # This file will be automatically generated by CrowdSec on first start.
-	prometheus = {
+        prometheus = {
           enabled = true;
           level = "full";
           listen_addr = "127.0.0.1";
@@ -795,7 +826,7 @@ in
       localConfig.acquisitions = [
         {
           source = "journalctl";
-          journalctl_filter = [ 
+          journalctl_filter = [
             "_SYSTEMD_UNIT=sshd.service"
             "_SYSTEMD_UNIT=caddy.service"
             "_SYSTEMD_UNIT=home-assistant.service"
@@ -820,23 +851,23 @@ in
         # Monolithic mode config
         target = "all";
         multitenancy_enabled = false; # Set to false for simple home setups
-        
-	# Server configuration
+
+        # Server configuration
         server = {
           http_listen_port = cfg.services.mimir.httpPort;
           grpc_listen_port = cfg.services.mimir.grpcPort;
         };
 
-	# The Ingester is usually what causes 'Status 1' because it wants HA (replication).
+        # The Ingester is usually what causes 'Status 1' because it wants HA (replication).
         ingester = {
-	  ring = {
+          ring = {
             instance_addr = "127.0.0.1";
             kvstore.store = "memberlist";
             replication_factor = 1;
           };
         };
 
-	# Simplified Memberlist for single-node
+        # Simplified Memberlist for single-node
         memberlist = {
           abort_if_cluster_join_fails = false;
           bind_addr = [ "127.0.0.1" ];
@@ -860,25 +891,31 @@ in
           };
         };
 
-	# Disable tracking.
-	usage_stats.enabled = false;
+        # Disable tracking.
+        usage_stats.enabled = false;
       };
     };
 
-    # We use a simple Prometheus instance just to "scrape" CrowdSec 
+    # We use a simple Prometheus instance just to "scrape" CrowdSec
     # and "remote_write" to Mimir. This is the standard "Agent" pattern.
     prometheus = {
       enable = true;
-      scrapeConfigs = [{
-        job_name = "crowdsec";
-        static_configs = [{
-          targets = [ "127.0.0.1:${toString cfg.services.crowdsec.metricsPort}" ];
-        }];
-      }];
+      scrapeConfigs = [
+        {
+          job_name = "crowdsec";
+          static_configs = [
+            {
+              targets = [ "127.0.0.1:${toString cfg.services.crowdsec.metricsPort}" ];
+            }
+          ];
+        }
+      ];
       # Tell Prometheus to send the data to Mimir.
-      remoteWrite = [{
-        url = "http://127.0.0.1:${toString cfg.services.mimir.httpPort}/api/v1/push";
-      }];
+      remoteWrite = [
+        {
+          url = "http://127.0.0.1:${toString cfg.services.mimir.httpPort}/api/v1/push";
+        }
+      ];
     };
   };
 
@@ -900,13 +937,19 @@ in
   fileSystems.${cfg.nas.mountPoint} = {
     device = cfg.nas.deviceName;
     fsType = cfg.nas.format;
-    options = [ "nofail" "users" ];
+    options = [
+      "nofail"
+      "users"
+    ];
   };
 
   fileSystems.${cfg.backup.mountPoint} = {
     device = cfg.backup.deviceName;
     fsType = cfg.backup.format;
-    options = [ "nofail" "users" ];
+    options = [
+      "nofail"
+      "users"
+    ];
   };
 
   environment.etc."rancher/k3s/config.yaml".text = ''
@@ -937,13 +980,17 @@ in
     ./certs/ca.crt # Generated with openssl.
   ];
 
-  security.sudo.extraRules = [{
-    users = [ "kasbuunk" ];
-    commands = [{
-      command = "${pkgs.nixos-rebuild}/bin/nixos-rebuild";
-      options = [ "NOPASSWD" ];
-    }];
-  }];
+  security.sudo.extraRules = [
+    {
+      users = [ "kasbuunk" ];
+      commands = [
+        {
+          command = "${pkgs.nixos-rebuild}/bin/nixos-rebuild";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
@@ -968,7 +1015,10 @@ in
   users.users.kasbuunk = {
     isNormalUser = true;
     description = "Kas Buunk";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+    ];
 
     openssh.authorizedKeys.keys = [
       # Public key NixOS HomeLab in 1Password.
@@ -1003,17 +1053,23 @@ in
   users.groups.adguardhome = { };
 
   # Add Jellyfin to your user group so it can read your NAS files.
-  users.users.jellyfin.extraGroups = [ "users" "kasbuunk" ];
+  users.users.jellyfin.extraGroups = [
+    "users"
+    "kasbuunk"
+  ];
 
   # Permission glue to let me and jellyfin access the transmission group.
-  users.groups.transmission.members = [ "kasbuunk" "jellyfin" ];
+  users.groups.transmission.members = [
+    "kasbuunk"
+    "jellyfin"
+  ];
 
   users.users.hass = {
     isSystemUser = true;
     group = "hass";
     home = cfg.services.homeassistant.configDir;
     createHome = true;
-    extraGroups = [ "dialout" ];  # For Zigbee USB access.
+    extraGroups = [ "dialout" ]; # For Zigbee USB access.
   };
   users.groups.hass = { };
 
@@ -1029,7 +1085,10 @@ in
   programs.ssh.startAgent = true;
 
   # Enable flakes for version control.
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -1066,90 +1125,95 @@ in
     useGlobalPkgs = true;
     useUserPackages = true;
 
-    users.kasbuunk = { pkgs, ... }: {
-      home = {
-        stateVersion = "25.11";
-        username = "kasbuunk";
-        homeDirectory = "/home/kasbuunk";
+    users.kasbuunk =
+      { pkgs, ... }:
+      {
+        home = {
+          stateVersion = "25.11";
+          username = "kasbuunk";
+          homeDirectory = "/home/kasbuunk";
 
-        sessionVariables = {
-          EDITOR = "nvim";
-          KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
-        };
-        shellAliases = {
-          "..." = "cd ../..";
-          "...." = "cd ../../..";
-          "....." = "cd ../../../..";
-          "......" = "cd ../../../../..";
-          "docker" = "podman";
-          "cdn" = "cd ~/.config/nixos";
-          "k" = "kubectl";
-          "vim" = "nvim";
-        };
-      };
-
-      programs = {
-        alacritty = {
-          enable = true;
-        };
-
-        fish = {
-          enable = true;
-          shellAliases = {
-            zf = "z --pipe=fzf";
-            build = "sudo nixos-rebuild switch --flake ~/.config/nixos";
+          sessionVariables = {
+            EDITOR = "nvim";
+            KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
           };
-          plugins = with pkgs.fishPlugins; [
-            { name = "fzf"; src = fzf-fish.src; } # better than built-in fzf keybinds
-          ];
-          shellInit = ''
-          # Check if we are in an SSH session (Remote)
-          if test -n "$SSH_CONNECTION"
-              # We are remote: Do nothing. Use the socket forwarded by SSH.
-              echo "Remote session detected. Using forwarded SSH agent."
-          else
-              # We are local (GUI/Console): Point to 1Password
-              # (Ensure you enabled the SSH Agent in 1Password Developer Settings)
-              if test -S ~/.1password/agent.sock
-                  set -x SSH_AUTH_SOCK ~/.1password/agent.sock
-              end
-          end
-          '';
-        };
-        fzf = {
-          enable = true;
-          enableFishIntegration = false; # use fzf-fish plugin instead
+          shellAliases = {
+            "..." = "cd ../..";
+            "...." = "cd ../../..";
+            "....." = "cd ../../../..";
+            "......" = "cd ../../../../..";
+            "docker" = "podman";
+            "cdn" = "cd ~/.config/nixos";
+            "k" = "kubectl";
+            "vim" = "nvim";
+          };
         };
 
-        tmux = {
-          enable = true;
-          clock24 = true;
-          customPaneNavigationAndResize = true;
-          disableConfirmationPrompt = true;
-          escapeTime = 0;
-          keyMode = "vi";
-          mouse = true;
-          newSession = true;
-          prefix = "c-a";
-          extraConfig = ''
-            # Make links clickable.
-            set -ga terminal-features "*:hyperlinks"
-    
-            # Navigate windows.
-            bind -n C-h select-pane -L
-            bind -n C-j select-pane -D
-            bind -n C-k select-pane -U
-            bind -n C-l select-pane -R
-    
-            # Termguicolors.
-            set -g default-terminal "$TERM"
-            set -ag terminal-overrides ",$TERM:Tc"
-            set-option -g default-shell /etc/profiles/per-user/kasbuunk/bin/fish
-            set-option -g default-command /etc/profiles/per-user/kasbuunk/bin/fish
-          '';
+        programs = {
+          alacritty = {
+            enable = true;
+          };
+
+          fish = {
+            enable = true;
+            shellAliases = {
+              zf = "z --pipe=fzf";
+              build = "sudo nixos-rebuild switch --flake ~/.config/nixos";
+            };
+            plugins = with pkgs.fishPlugins; [
+              {
+                name = "fzf";
+                src = fzf-fish.src;
+              } # better than built-in fzf keybinds
+            ];
+            shellInit = ''
+              # Check if we are in an SSH session (Remote)
+              if test -n "$SSH_CONNECTION"
+                  # We are remote: Do nothing. Use the socket forwarded by SSH.
+                  echo "Remote session detected. Using forwarded SSH agent."
+              else
+                  # We are local (GUI/Console): Point to 1Password
+                  # (Ensure you enabled the SSH Agent in 1Password Developer Settings)
+                  if test -S ~/.1password/agent.sock
+                      set -x SSH_AUTH_SOCK ~/.1password/agent.sock
+                  end
+              end
+            '';
+          };
+          fzf = {
+            enable = true;
+            enableFishIntegration = false; # use fzf-fish plugin instead
+          };
+
+          tmux = {
+            enable = true;
+            clock24 = true;
+            customPaneNavigationAndResize = true;
+            disableConfirmationPrompt = true;
+            escapeTime = 0;
+            keyMode = "vi";
+            mouse = true;
+            newSession = true;
+            prefix = "c-a";
+            extraConfig = ''
+              # Make links clickable.
+              set -ga terminal-features "*:hyperlinks"
+
+              # Navigate windows.
+              bind -n C-h select-pane -L
+              bind -n C-j select-pane -D
+              bind -n C-k select-pane -U
+              bind -n C-l select-pane -R
+
+              # Termguicolors.
+              set -g default-terminal "$TERM"
+              set -ag terminal-overrides ",$TERM:Tc"
+              set-option -g default-shell /etc/profiles/per-user/kasbuunk/bin/fish
+              set-option -g default-command /etc/profiles/per-user/kasbuunk/bin/fish
+            '';
+          };
         };
       };
-    };
   };
 
   # This value determines the NixOS release from which the default
@@ -1196,7 +1260,12 @@ in
       environment = {
         SSH_AUTH_SOCK = ""; # Disable SSH agent
       };
-      path = [ pkgs.git pkgs.nix pkgs.nixos-rebuild pkgs.openssh ];
+      path = [
+        pkgs.git
+        pkgs.nix
+        pkgs.nixos-rebuild
+        pkgs.openssh
+      ];
       script = ''
         # 1. Setup Git
         git config --global --add safe.directory /home/kasbuunk/.config/nixos
@@ -1247,7 +1316,7 @@ in
         while ! ${pkgs.curl}/bin/curl -sk https://localhost:${toString cfg.services.gitea.httpPort} > /dev/null; do
           sleep 1
         done
-       
+
         ${config.services.gitea.package}/bin/gitea admin user create \
           --admin \
           --username admin \

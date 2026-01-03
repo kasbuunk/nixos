@@ -64,6 +64,9 @@
       httpPort = 8080;
       metricsPort = 6060;
     };
+    suricata = {
+      dataDir = "/var/lib/suricata";
+    };
   };
 
   nas = {
